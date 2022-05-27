@@ -93,7 +93,7 @@ namespace EdgeDB.ExampleApp.Examples
             // should call the 'PersonBuilder' method to deserialize
             var johnMethod = await client.QueryRequiredSingleAsync<PersonMethod>(selectQuery).ConfigureAwait(false);
 
-            // should call the global method defined on line 58 to deserialize
+            // should call the global method defined on line 72 to deserialize
             var johnGlobal = await client.QueryRequiredSingleAsync<PersonGlobal>(selectQuery).ConfigureAwait(false);
 
             // should call the global factory defined on line 80 to deserialize
