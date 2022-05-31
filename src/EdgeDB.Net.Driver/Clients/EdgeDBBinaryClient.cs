@@ -224,7 +224,7 @@ namespace EdgeDB
 
                 var executeResult = await Duplexer.DuplexAndSyncAsync(new Execute() 
                 { 
-                    Capabilities = (result.Capabilities ?? capabilities) ?? AllowCapabilities.Modifications, 
+                    Capabilities = (result.Capabilities ?? capabilities) ?? Capabilities.Modifications, 
                     Arguments = argumentCodec.SerializeArguments(args) 
                 }, handler, linkedToken).ConfigureAwait(false);
 
@@ -740,7 +740,7 @@ namespace EdgeDB
 
             var deferMode = $"{(!deferrable ? "not " : "")}deferrable";
 
-            await ExecuteInternalAsync($"start transaction isolation {isolationMode}, {readMode}, {deferMode}", capabilities: null, token: token).ConfigureAwait(false);
+            await ExecuteInternalAsync($"start transaction isolation {isolationMode}, {readMode}, {deferMode}", capabilities: Capabilities.Transaction, token: token).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
