@@ -52,6 +52,9 @@ namespace EdgeDB
         public abstract string Translate(Expression expression, ExpressionContext context);
 
         public static string Translate<TInnerExpression>(Expression<TInnerExpression> expression)
+            => Translate(expression);
+
+        public static string Translate(LambdaExpression expression)
         {
             var context = new ExpressionContext(expression);
             return TranslateExpression(expression.Body, context);
@@ -59,7 +62,11 @@ namespace EdgeDB
 
         protected static string TranslateExpression(Expression expression, ExpressionContext context)
         {
-            if (_translators.TryGetValue(expression.GetType(), out var translator))
+            var expType = expression.GetType();
+            while (!expType.IsPublic)
+                expType = expType.BaseType!;  
+
+            if (_translators.TryGetValue(expType, out var translator))
                 return translator.Translate(expression, context);
 
             throw new Exception("AAAA");

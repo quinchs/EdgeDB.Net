@@ -9,7 +9,7 @@ namespace EdgeDB.Serializer
 {
     public sealed class AttributeNamingStrategy : INamingStrategy
     {
-        public string GetName(PropertyInfo property)
+        public string GetName(MemberInfo property)
         {
             return property.GetCustomAttribute<EdgeDBPropertyAttribute>()?.Name ?? property.Name;
         }

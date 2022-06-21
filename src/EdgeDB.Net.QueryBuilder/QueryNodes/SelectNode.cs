@@ -8,12 +8,9 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.QueryNodes
 {
-    internal class SelectNode : QueryNode
+    internal class SelectNode : QueryNode<SelectContext>
     {
-        public SelectNode(QueryBuilder builder) : base(builder)
-        {
-
-        }
+        public SelectNode(QueryBuilder builder) : base(builder) { }
 
         protected virtual string GetShape()
         {
@@ -35,13 +32,8 @@ namespace EdgeDB.QueryNodes
             // check if theres a child select with the same type
             if(Builder.Nodes.Any(x => x.Node is SelectNode select && select.Context.CurrentType == Context.CurrentType))
             {
-                MakeDetatched();
+                Query.Insert(7, "detached ");
             }
-        }
-
-        private void MakeDetatched()
-        {
-            Query.Insert(7, "detached ");
         }
     }
 }

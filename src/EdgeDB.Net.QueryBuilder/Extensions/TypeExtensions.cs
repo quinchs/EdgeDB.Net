@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EdgeDB.Serializer;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -11,5 +12,7 @@ namespace EdgeDB
     {
         public static string GetEdgeDBTypeName(this Type type)
             => type.GetCustomAttribute<EdgeDBTypeAttribute>()?.Name ?? type.Name;
+        public static string GetEdgeDBPropertyName(this MemberInfo info)
+            => info.GetCustomAttribute<EdgeDBPropertyAttribute>()?.Name ?? TypeBuilder.NamingStrategy.GetName(info);
     }
 }

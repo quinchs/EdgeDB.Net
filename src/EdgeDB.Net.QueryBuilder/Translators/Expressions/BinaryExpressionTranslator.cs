@@ -11,8 +11,8 @@ namespace EdgeDB.Translators.Expressions
     {
         public override string Translate(BinaryExpression expression, ExpressionContext context)
         {
-            var left = TranslateExpression(expression, context);
-            var right = TranslateExpression(expression, context);
+            var left = TranslateExpression(expression.Left, context);
+            var right = TranslateExpression(expression.Right, context);
 
             if (!TryGetExpressionOperator(expression.NodeType, out var op))
                 throw new NotSupportedException($"Failed to find operator for node type {expression.NodeType}");

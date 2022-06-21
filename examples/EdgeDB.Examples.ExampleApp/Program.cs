@@ -7,8 +7,6 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using static EdgeDB.ExampleApp.Examples.JsonResults;
 
-ExpressionTranslator.Translate<Func<Person, bool>>(x => x.Name == "John");
-
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .MinimumLevel.Debug()

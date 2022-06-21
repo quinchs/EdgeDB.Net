@@ -6,6 +6,15 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.QueryNodes
 {
+    internal abstract class QueryNode<TContext> : QueryNode
+        where TContext : QueryContext
+    {
+        protected QueryNode(QueryBuilder builder) : base(builder) { }
+
+        protected TContext Context
+            => (TContext)Builder.Context;
+    }
+
     internal abstract class QueryNode
     {
         protected readonly QueryBuilder Builder;
@@ -13,16 +22,13 @@ namespace EdgeDB.QueryNodes
         protected StringBuilder Query
             => Builder.Query;
 
-        protected QueryContext Context
-            => Builder.Context;
-
         public QueryNode(QueryBuilder builder)
         {
             Builder = builder;
         }
 
         protected abstract void Visit();
-        protected abstract void FinalizeQuery();
+        protected virtual void FinalizeQuery() { }
 
         protected void SetVariable(string name, object? value)
             => Builder.QueryVariables[name] = value;
