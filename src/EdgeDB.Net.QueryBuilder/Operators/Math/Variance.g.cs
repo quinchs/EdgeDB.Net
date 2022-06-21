@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class MathVariance : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "math::var({0})";
     }
 }

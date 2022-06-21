@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class StringToLower : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "str_lower({0})";
     }
 }
