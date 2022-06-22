@@ -11,7 +11,7 @@ namespace EdgeDB.Translators.Expressions
     {
         public override string Translate(ConstantExpression expression, ExpressionContext context)
         {
-            return ParseObject(expression.Value);
+            return QueryUtils.ParseObject(expression.Value);
         }
     }
 }

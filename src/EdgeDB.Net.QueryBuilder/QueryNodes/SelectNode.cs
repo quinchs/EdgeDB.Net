@@ -10,6 +10,11 @@ namespace EdgeDB.QueryNodes
 {
     internal class SelectNode : QueryNode<SelectContext>
     {
+        public override bool IsRootNode => true;
+
+        public override QueryExpressionType? ValidChildren
+            => QueryExpressionType.Filter | QueryExpressionType.OrderBy | QueryExpressionType.Offset | QueryExpressionType.Limit;
+
         public SelectNode(QueryBuilder builder) : base(builder) { }
 
         protected virtual string GetShape()
@@ -21,16 +26,16 @@ namespace EdgeDB.QueryNodes
             return $"{{ {string.Join(", ", propertyNames)} }}";
         }
 
-        protected override void Visit()
+        public override void Visit()
         {
             var shape = GetShape();
-            Query.Append($"select {Context.CurrentType.GetEdgeDBTypeName()} {shape}");
+            Query.Append($"select {Context.SelectName ?? Context.CurrentType.GetEdgeDBTypeName()} {shape}");
         }
 
-        protected override void FinalizeQuery()
+        public override void FinalizeQuery()
         {
             // check if theres a child select with the same type
-            if(Builder.Nodes.Any(x => x.Node is SelectNode select && select.Context.CurrentType == Context.CurrentType))
+            if(Builder.Nodes.Any(x => x is SelectNode select && select.Context.CurrentType == Context.CurrentType))
             {
                 Query.Insert(7, "detached ");
             }

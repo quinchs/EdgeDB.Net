@@ -9,7 +9,7 @@ namespace EdgeDB.QueryNodes
     internal class SelectContext : QueryContext
     {
         public object? Shape { get; init; }
-
+        public string? SelectName { get; init; }
         public SelectContext(Type currentType) : base(currentType)
         {
         }

@@ -71,31 +71,5 @@ namespace EdgeDB
 
             throw new Exception("AAAA");
         }
-
-        protected static string ParseObject(object? obj)
-        {
-            if (obj is null)
-                return "{}";
-
-            if(obj is Enum enm)
-            {
-                var type = enm.GetType();
-                var att = type.GetCustomAttribute<EnumSerializerAttribute>();
-                return att != null ? att.Method switch
-                {
-                    SerializationMethod.Lower => $"\"{obj.ToString()?.ToLower()}\"",
-                    SerializationMethod.Numeric => Convert.ChangeType(obj, type.BaseType ?? typeof(int)).ToString() ?? "{}",
-                    _ => "{}"
-                } : Convert.ChangeType(obj, type.BaseType ?? typeof(int)).ToString() ?? "{}";
-            }
-
-            return obj switch
-            {
-                string str => $"\"{str}\"",
-                char chr => $"\"{chr}\"",
-                Type type => PacketSerializer.GetEdgeQLType(type) ?? type.GetEdgeDBTypeName(),
-                _ => obj.ToString()!
-            };
-        }
     }
 }

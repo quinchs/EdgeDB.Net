@@ -37,4 +37,13 @@ module default {
   type OtherThing extending AbstractThing {
     required property attribute -> str;
   }
+
+  # for query builder
+  type LinkPerson {
+    required property name -> str;
+    required property email -> str {
+      constraint exclusive;
+    }
+    link best_friend -> LinkPerson;
+  }
 }

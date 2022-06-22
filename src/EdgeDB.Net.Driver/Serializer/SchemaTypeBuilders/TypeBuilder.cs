@@ -5,6 +5,7 @@ using System.Reflection;
 
 namespace EdgeDB.Serializer
 {
+    internal delegate void OnObjectCreated(object obj, Guid id);
     /// <summary>
     ///     Represents the class used to build types from edgedb query results.
     /// </summary>
@@ -20,10 +21,14 @@ namespace EdgeDB.Serializer
         /// </remarks>
         public static INamingStrategy NamingStrategy { get; set; }
 
-        private readonly static ConcurrentDictionary<Type, TypeDeserializeInfo> _typeInfo = new();
         internal static readonly INamingStrategy AttributeNamingStrategy;
+        internal static event OnObjectCreated? OnObjectCreated;
+        
+        private readonly static ConcurrentDictionary<Type, TypeDeserializeInfo> _typeInfo = new();
         private readonly static List<string> _scannedAssemblies;
 
+        
+        
         static TypeBuilder()
         {
             _scannedAssemblies = new();
@@ -250,6 +255,11 @@ namespace EdgeDB.Serializer
             }
         }
         #endregion
+
+        internal static void DispatchObjectCreate(object obj, Guid id)
+        {
+            OnObjectCreated?.Invoke(obj, id);
+        }
     }
 
     public delegate object TypeDeserializerFactory(IDictionary<string, object?> args);
@@ -385,7 +395,11 @@ namespace EdgeDB.Serializer
         }
 
         public object Deserialize(IDictionary<string, object?> args)
-            => _factory(args);
+        {
+            var result = _factory(args);
+            TypeBuilder.DispatchObjectCreate(result, (Guid)args["id"]!);
+            return result;
+        }
 
         public static implicit operator TypeDeserializerFactory(TypeDeserializeInfo info) => info._factory;
     }

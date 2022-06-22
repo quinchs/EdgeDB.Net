@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace EdgeDB
 {
-    internal abstract class QueryContext
+    internal class QueryContext
     {
         public Type CurrentType { get; init; }
 

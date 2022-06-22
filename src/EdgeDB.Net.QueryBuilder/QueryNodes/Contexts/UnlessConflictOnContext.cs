@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.QueryNodes
 {
-    internal class FilterContext : QueryContext
+    internal class UnlessConflictOnContext : QueryContext
     {
-        public LambdaExpression? Expression { get; init; }
+        public LambdaExpression? Selector { get; init; }
 
-        public FilterContext(Type currentType) : base(currentType) { }
+        public UnlessConflictOnContext(Type currentType) : base(currentType) { }
     }
 }

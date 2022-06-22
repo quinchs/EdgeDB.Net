@@ -11,12 +11,9 @@ namespace EdgeDB.QueryNodes
     {
         public OrderByDirection Direction { get; init; }
         public EmptyPlacement? EmptyPlacement { get; init; }
-        public LambdaExpression Expression { get; init; }
+        public LambdaExpression? Expression { get; init; }
 
-        public OrderByContext(Type currentType, LambdaExpression expression) : base(currentType)
-        {
-            Expression = expression;
-        }
+        public OrderByContext(Type currentType) : base(currentType) { }
     }
 
     internal enum OrderByDirection

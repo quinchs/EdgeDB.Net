@@ -10,21 +10,16 @@ namespace EdgeDB
     internal class QueryBuilder
     {
         public StringBuilder Query { get; }
-        public List<CompiledQueryNode> Nodes { get; }
+        public List<QueryNode> Nodes { get; }
         public QueryContext Context { get; }
         public Dictionary<string, object?> QueryVariables { get; } = new();
+        public Dictionary<string, object?> QueryGlobals { get; } = new();
 
-        public QueryBuilder(QueryContext context, List<CompiledQueryNode>? nodes = null)
+        public QueryBuilder(QueryContext context, List<QueryNode>? nodes = null)
         {
             Query = new();
             Nodes = nodes ?? new();
             Context = context;
         }
-    }
-
-    internal class CompiledQueryNode
-    {
-        public QueryNode? Node { get; init; }
-        public StringBuilder? Query { get; init; }
     }
 }

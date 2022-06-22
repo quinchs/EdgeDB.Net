@@ -19,6 +19,9 @@ namespace EdgeDB.QueryNodes
     {
         protected readonly QueryBuilder Builder;
 
+        public virtual QueryExpressionType? ValidChildren { get; }
+        public abstract bool IsRootNode { get; }
+
         protected StringBuilder Query
             => Builder.Query;
 
@@ -27,10 +30,30 @@ namespace EdgeDB.QueryNodes
             Builder = builder;
         }
 
-        protected abstract void Visit();
-        protected virtual void FinalizeQuery() { }
+        public abstract void Visit();
+        public virtual void FinalizeQuery() { }
 
         protected void SetVariable(string name, object? value)
             => Builder.QueryVariables[name] = value;
+
+        protected void SetGlobal(string name, object? value)
+            => Builder.QueryGlobals[name] = value;
+
+        internal BuiltQueryNode Build()
+            => new BuiltQueryNode(Query.ToString(), Builder.QueryVariables, Builder.QueryGlobals);
+    }
+
+    internal class BuiltQueryNode
+    {
+        public string Query { get; init; }
+        public IDictionary<string, object?> Parameters { get; init; }
+        public IDictionary<string, object?> Globals { get; init; }
+
+        public BuiltQueryNode(string query, IDictionary<string, object?> parameters, IDictionary<string, object?> globals)
+        {
+            Query = query;
+            Parameters = parameters;
+            Globals = globals;
+        }
     }
 }

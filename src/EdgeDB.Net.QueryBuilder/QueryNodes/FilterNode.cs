@@ -8,9 +8,11 @@ namespace EdgeDB.QueryNodes
 {
     internal class FilterNode : QueryNode<FilterContext>
     {
+        public override bool IsRootNode => false;
+
         public FilterNode(QueryBuilder builder) : base(builder) { }
 
-        protected override void Visit()
+        public override void Visit()
         {
             if (Context.Expression is null)
                 throw new ArgumentNullException("No expression was passed in for a filter node");
