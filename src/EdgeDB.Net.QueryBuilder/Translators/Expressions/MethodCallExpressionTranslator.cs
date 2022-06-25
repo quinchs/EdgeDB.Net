@@ -28,8 +28,8 @@ namespace EdgeDB.Translators.Expressions
             // check if its a known method 
             if(EdgeQL.FunctionOperators.TryGetValue($"{expression.Method.DeclaringType?.Name}.{expression.Method.Name}", out edgeqlOperator))
             {
-                var parsedArgs = expression.Arguments.Select(x => TranslateExpression(x, context));
-                return edgeqlOperator.Build(parsedArgs);
+                var args = (expression.Object != null ? new string[] { TranslateExpression(expression.Object, context) } : Array.Empty<string>()).Concat(expression.Arguments.Select(x => TranslateExpression(x, context))); 
+                return edgeqlOperator.Build(args.ToArray());
             }
 
             throw new Exception($"Couldn't find translator for {expression.Method.Name}");

@@ -28,22 +28,31 @@ namespace EdgeDB.ExampleApp.Examples
 
         public async Task ExecuteAsync(EdgeDBClient client)
         {
-            var collection = client.GetCollection<LinkPerson>();
+            var collection = client.GetCollection<Person>();
 
-            var result = await collection.Filter(x => EdgeQL.ILike(x.Name, "j%")).ExecuteAsync();
-
-            var insertResult = collection.Insert(new LinkPerson
-            {
-                Email = "email@example.com",
-                Name = "ExampleName",
-                BestFriend = new()
+            collection
+                .With("john", new QueryBuilder<Person>().Select.Filter(x => x.Name == "John Smith"))
+                .Update(x => new Person
                 {
-                    Email = "email2@example2.com",
-                    Name = "ExampleName2"
-                }
-            }).UnlessConflictOn(x => x.Email).Build();
+                    Email = "johnsmith@example.com",
+                });
 
-            var pretty = Prettify(insertResult.Query);
+            var s = collection.Build();
+
+            //var result = await collection.Filter(x => EdgeQL.ILike(x.Name, "j%")).ExecuteAsync();
+
+            //var insertResult = collection.Insert(new LinkPerson
+            //{
+            //    Email = "email@example.com",
+            //    Name = "ExampleName",
+            //    BestFriend = new()
+            //    {
+            //        Email = "email2@example2.com",
+            //        Name = "ExampleName2"
+            //    }
+            //}).UnlessConflictOn(x => x.Email).Build();
+
+            //var pretty = Prettify(insertResult.Query);
 
         }
 

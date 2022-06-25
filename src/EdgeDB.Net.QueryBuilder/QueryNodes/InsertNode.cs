@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,15 +11,7 @@ namespace EdgeDB.QueryNodes
 {
     internal class InsertNode : QueryNode<InsertContext>
     {
-        private const string VARIABLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        private static readonly Random _rng = new();
-
-        public override bool IsRootNode => true;
-
-        public override QueryExpressionType? ValidChildren 
-            => QueryExpressionType.UnlessConflictOn | QueryExpressionType.Else;
-
-        public InsertNode(QueryBuilder builder) : base(builder) { }
+        public InsertNode(NodeBuilder builder) : base(builder) { }
 
         private string BuildInsertShape(Type? shapeType = null, object? shapeValue = null)
         {
@@ -37,7 +30,7 @@ namespace EdgeDB.QueryNodes
 
                 if(edgeqlType != null)
                 {
-                    var varName = GenerateRandomVariableName();
+                    var varName = QueryUtils.GenerateRandomVariableName();
                     SetVariable(varName, property.GetValue(Context.Value));
                     shape.Add($"{propertyName} := <{edgeqlType}>${varName}");
                     continue;
@@ -52,7 +45,7 @@ namespace EdgeDB.QueryNodes
                     if(QueryObjectManager.TryGetObjectId(subValue, out var id))
                     {
                         // insert a sub query
-                        var globalName = GenerateRandomVariableName();
+                        var globalName = QueryUtils.GenerateRandomVariableName();
                         SetGlobal(globalName, new SubQuery($"(select {property.PropertyType.GetEdgeDBTypeName()} filter .id = <uuid>\"{id}\")"));
                         shape.Add($"{propertyName} := {globalName}");
                         continue;
@@ -63,7 +56,7 @@ namespace EdgeDB.QueryNodes
                             shape.Add($"{propertyName} := {{}}");
                         else
                         {
-                            var globalName = GenerateRandomVariableName();
+                            var globalName = QueryUtils.GenerateRandomVariableName();
                             SetGlobal(globalName, new SubQuery($"(insert {property.PropertyType.GetEdgeDBTypeName()} {BuildInsertShape(property.PropertyType, subValue)})"));
                             shape.Add($"{propertyName} := {globalName}");
                         }
@@ -77,25 +70,28 @@ namespace EdgeDB.QueryNodes
 
             return $"{{ {string.Join(", ", shape)} }}";
         }
-
-        private static string GenerateRandomVariableName()
-        {
-            return new string(Enumerable.Repeat(VARIABLE_CHARS, 12).Select(x => x[_rng.Next(x.Length)]).ToArray());
-        }
-
+        
         public override void Visit()
         {
             var shape = BuildInsertShape();
             var insert = $"insert {Context.CurrentType.GetEdgeDBTypeName()} {shape}";
 
-            if (Context.StoreAsGlobal)
+            if (Context.SetAsGlobal && Context.GlobalName != null)
             {
-                var globalName = GenerateRandomVariableName();
-                SetGlobal(globalName, new SubQuery(insert));
-                Context.GlobalName = globalName;
+                SetGlobal(Context.GlobalName, new SubQuery(insert));
             }
             else
                 Query.Append(insert);
+        }
+
+        public void UnlessConflictOn(LambdaExpression selector)
+        {
+            Query.Append($" unless conflict on {ExpressionTranslator.Translate(selector, Builder.QueryVariables)}");
+        }
+
+        public void ElseDefault()
+        {
+            Query.Append($" else (select {Context.CurrentType.GetEdgeDBTypeName()})");
         }
     }
 }

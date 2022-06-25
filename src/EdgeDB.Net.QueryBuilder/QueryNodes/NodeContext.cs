@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 
 namespace EdgeDB
 {
-    internal class QueryContext
+    internal class NodeContext
     {
+        public bool SetAsGlobal { get; init; }
+        public string? GlobalName { get; init; }
         public Type CurrentType { get; init; }
 
-        public QueryContext(Type currentType)
+        public NodeContext(Type currentType)
         {
             CurrentType = currentType;
         }

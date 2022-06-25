@@ -1,7 +1,9 @@
-﻿using EdgeDB.Serializer;
+﻿using EdgeDB.Interfaces.Queries;
+using EdgeDB.Serializer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,12 +12,7 @@ namespace EdgeDB.QueryNodes
 {
     internal class SelectNode : QueryNode<SelectContext>
     {
-        public override bool IsRootNode => true;
-
-        public override QueryExpressionType? ValidChildren
-            => QueryExpressionType.Filter | QueryExpressionType.OrderBy | QueryExpressionType.Offset | QueryExpressionType.Limit;
-
-        public SelectNode(QueryBuilder builder) : base(builder) { }
+        public SelectNode(NodeBuilder builder) : base(builder) { }
 
         protected virtual string GetShape()
         {
@@ -32,13 +29,33 @@ namespace EdgeDB.QueryNodes
             Query.Append($"select {Context.SelectName ?? Context.CurrentType.GetEdgeDBTypeName()} {shape}");
         }
 
-        public override void FinalizeQuery()
+        public void Filter(LambdaExpression expression)
         {
-            // check if theres a child select with the same type
-            if(Builder.Nodes.Any(x => x is SelectNode select && select.Context.CurrentType == Context.CurrentType))
-            {
-                Query.Insert(7, "detached ");
-            }
+            if (expression is null)
+                throw new ArgumentNullException(nameof(expression), "No expression was passed in for a filter node");
+
+            var parsedExpression = ExpressionTranslator.Translate(expression, Builder.QueryVariables);
+            Query.Append($" filter {parsedExpression}");
+        }
+
+        public void OrderBy(bool asc, LambdaExpression selector, OrderByNullPlacement? nullPlacement)
+        {
+            if (selector is null)
+                throw new ArgumentNullException(nameof(selector), "No expression was passed in for an order by node");
+
+            var parsedExpression = ExpressionTranslator.Translate(selector, Builder.QueryVariables);
+            var direction = asc ? "asc" : "desc";
+            Query.Append($" order by {parsedExpression} {direction}{(nullPlacement.HasValue ? $" {nullPlacement.Value.ToString().ToLowerInvariant()}" : "")}");
+        }
+
+        internal void Offset(long offset)
+        {
+            Query.Append($" offset {offset}");
+        }
+
+        internal void Limit(long limit)
+        {
+            Query.Append($" limit {limit}");
         }
     }
 }

@@ -9,6 +9,9 @@ namespace EdgeDB
 {
     internal class QueryUtils
     {
+        private const string VARIABLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        private static readonly Random _rng = new();
+
         internal static string ParseObject(object? obj)
         {
             if (obj is null)
@@ -35,5 +38,11 @@ namespace EdgeDB
                 _ => obj.ToString()!
             };
         }
+
+        public static string GenerateRandomVariableName()
+        {
+            return new string(Enumerable.Repeat(VARIABLE_CHARS, 12).Select(x => x[_rng.Next(x.Length)]).ToArray());
+        }
+
     }
 }

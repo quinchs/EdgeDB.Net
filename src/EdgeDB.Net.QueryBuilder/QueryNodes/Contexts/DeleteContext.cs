@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.QueryNodes
 {
-    internal class WithContext : NodeContext
+    internal class DeleteContext : SelectContext
     {
-        public Dictionary<string, object?>? Values { get; init; }
-        public WithContext(Type currentType) : base(currentType)
+        public DeleteContext(Type currentType) : base(currentType)
         {
         }
     }

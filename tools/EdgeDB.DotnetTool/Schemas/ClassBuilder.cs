@@ -141,7 +141,7 @@ namespace EdgeDB.DotnetTool
                 {
                     // do a reverse lookup on the root function to see if we can decipher the type
                     computed = Regex.Replace(computed, @"^.+?::", _ => "");
-                    var returnType = QueryBuilder.ReverseLookupFunction(computed);
+                    var returnType = typeof(string);//NodeBuilder.ReverseLookupFunction(computed);
 
                     if (returnType != null)
                         type = returnType.FullName;
