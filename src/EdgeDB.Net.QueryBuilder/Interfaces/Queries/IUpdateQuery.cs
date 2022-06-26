@@ -10,5 +10,6 @@ namespace EdgeDB.Interfaces.Queries
     public interface IUpdateQuery<TType> : IMultiCardinalityExecutable<TType>
     {
         IMultiCardinalityExecutable<TType> Filter(Expression<Func<TType, bool>> filter);
+        IMultiCardinalityExecutable<TType> Filter(Expression<Func<QueryContext, TType, bool>> filter);
     }
 }

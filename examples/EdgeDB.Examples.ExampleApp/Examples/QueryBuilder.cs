@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -23,37 +24,58 @@ namespace EdgeDB.ExampleApp.Examples
         {
             public string? Name { get; set; }
             public string? Email { get; set; }
-            public Guid Id { get; set; }
         }
 
         public async Task ExecuteAsync(EdgeDBClient client)
         {
-            var collection = client.GetCollection<Person>();
+            var builder = new QueryBuilder<LinkPerson>();
 
-            collection
-                .With("john", new QueryBuilder<Person>().Select.Filter(x => x.Name == "John Smith"))
-                .Update(x => new Person
+            // get or create john
+            var john = await builder
+                .Insert(new LinkPerson { Email = "johndoe@email.com", Name = "John Doe" })
+                .UnlessConflictOn(x => x.Email)
+                .ElseReturn()
+                .ExecuteAsync(client);
+
+            // get or create jane
+            var jane = await builder
+                .With("john", john)
+                .Insert(ctx => new LinkPerson 
+                { 
+                    Name = "Jane Doe", 
+                    Email = "janedoe@email.com", 
+                    BestFriend = ctx.Global<LinkPerson>("john") 
+                })
+                .UnlessConflictOn(x => x.Email)
+                .ElseReturn()
+                .ExecuteAsync(client);
+
+            Logger!.LogInformation("John result: {@john}", john);
+            Logger!.LogInformation("Jane result: {@jane}", jane);
+
+            // anon types
+            var anonPerson = await builder
+                .Select(ctx => new
                 {
-                    Email = "johnsmith@example.com",
-                });
+                    Name = ctx.Include<string>(),
+                    Email = ctx.Include<string>(),
+                    HasFriend = ctx.Local<LinkPerson>("BestFriend") != null
+                })
+                .ExecuteAsync(client);
 
-            var s = collection.Build();
-
-            //var result = await collection.Filter(x => EdgeQL.ILike(x.Name, "j%")).ExecuteAsync();
-
-            //var insertResult = collection.Insert(new LinkPerson
-            //{
-            //    Email = "email@example.com",
-            //    Name = "ExampleName",
-            //    BestFriend = new()
-            //    {
-            //        Email = "email2@example2.com",
-            //        Name = "ExampleName2"
-            //    }
-            //}).UnlessConflictOn(x => x.Email).Build();
-
-            //var pretty = Prettify(insertResult.Query);
-
+            var test = builder
+                .Insert(new LinkPerson()
+                {
+                    Name = "upsert demo",
+                    Email = "upsert@mail.com"
+                })
+                .UnlessConflictOn(x => x.Email)
+                .Else(q => 
+                    q.Update(old => new LinkPerson
+                    { 
+                        Name = old.Name!.ToUpper()
+                    })
+                );
         }
 
         public static string Prettify(string queryText)

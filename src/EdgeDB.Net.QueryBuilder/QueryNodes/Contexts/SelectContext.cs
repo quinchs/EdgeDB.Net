@@ -9,8 +9,8 @@ namespace EdgeDB.QueryNodes
 {
     internal class SelectContext : NodeContext
     {
-        public Expression<Func<object>>? Shape { get; init; }
-        public string? SelectName { get; init; }
+        public LambdaExpression? Shape { get; init; }
+        public string? SelectName { get; set; }
         public SelectContext(Type currentType) : base(currentType)
         {
         }

@@ -9,6 +9,10 @@ namespace EdgeDB.Interfaces
     public interface IUnlessConflictOn<TType> : ISingleCardinalityExecutable<TType>
     {
         ISingleCardinalityExecutable<TType> ElseReturn();
-        // TODO: Else expression
+
+        IMultiCardinalityExecutable<TType> Else(Func<IQueryBuilder<TType>, IMultiCardinalityExecutable<TType>> elseQuery);
+        ISingleCardinalityExecutable<TType> Else(Func<IQueryBuilder<TType>, ISingleCardinalityExecutable<TType>> elseQuery);
+        IQueryBuilder<object?> Else<TQueryBuilder>(TQueryBuilder elseQuery)
+            where TQueryBuilder : IQueryBuilder;
     }
 }

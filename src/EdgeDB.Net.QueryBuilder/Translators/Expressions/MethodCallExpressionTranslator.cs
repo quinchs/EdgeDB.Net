@@ -13,6 +13,28 @@ namespace EdgeDB.Translators.Expressions
     {
         public override string Translate(MethodCallExpression expression, ExpressionContext context)
         {
+            // special case for local
+            if(expression.Method.DeclaringType == typeof(QueryContext) && expression.Method.Name == "Local")
+            {
+                // check arg scope
+                var rawArg = TranslateExpression(expression.Arguments[0], context.Enter(x => x.IsTypeReference = true));
+                var rawPath = rawArg.Split('.');
+                string[] parsedPath = new string[rawPath.Length];
+
+                for(int i = 0; i != rawPath.Length; i++)
+                {
+                    var prop = (MemberInfo?)context.LocalScope?.GetProperty(rawPath[i]) ?? 
+                        context.LocalScope?.GetField(rawPath[i]) ??
+                        (MemberInfo?)context.NodeContext.CurrentType.GetProperty(rawPath[i]) ??
+                        context.NodeContext.CurrentType.GetField(rawPath[i]);
+                    if (prop is null)
+                        throw new InvalidOperationException($"The property \"{rawPath[i]}\" within \"{rawArg}\" is out of scope");
+                    parsedPath[i] = prop.GetEdgeDBPropertyName();
+                }
+
+                return $".{string.Join('.', parsedPath)}";
+            }
+
             // check if the method has an 'EquivalentOperator' attribute
             var edgeqlOperator = expression.Method.GetCustomAttribute<EquivalentOperator>()?.Operator;
 

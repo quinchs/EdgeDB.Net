@@ -54,9 +54,9 @@ namespace EdgeDB
         public static string Translate<TInnerExpression>(Expression<TInnerExpression> expression)
             => Translate(expression);
 
-        public static string Translate(LambdaExpression expression, IDictionary<string, object?> queryArguments)
+        public static string Translate(LambdaExpression expression, IDictionary<string, object?> queryArguments, NodeContext nodeContext)
         {
-            var context = new ExpressionContext(expression, queryArguments);
+            var context = new ExpressionContext(nodeContext, expression, queryArguments);
             return TranslateExpression(expression.Body, context);
         }
 

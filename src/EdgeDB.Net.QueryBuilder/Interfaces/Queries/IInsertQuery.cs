@@ -9,6 +9,7 @@ namespace EdgeDB.Interfaces.Queries
 {
     public interface IInsertQuery<TType> : ISingleCardinalityExecutable<TType>
     {
-        IInsertQuery<TType> UnlessConflictOn(Expression<Func<TType, object?>> propertySelector);
+        IUnlessConflictOn<TType> UnlessConflictOn(Expression<Func<TType, object?>> propertySelector);
+        IUnlessConflictOn<TType> UnlessConflictOn(Expression<Func<QueryContext, TType, object?>> propertySelector);
     }
 }

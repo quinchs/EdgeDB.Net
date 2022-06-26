@@ -119,17 +119,5 @@ namespace EdgeDB
                     }
             }
         }
-
-        private static bool IsValidProperty(PropertyInfo type)
-        {
-            var shouldIgnore = type.GetCustomAttribute<EdgeDBIgnoreAttribute>() is not null;
-
-            return !shouldIgnore && type.GetSetMethod() is not null;
-        }
-
-        private static bool IsValidTargetType(Type type) =>
-            (type.IsClass || type.IsValueType) && 
-            !type.IsSealed && 
-            type.GetConstructor(Array.Empty<Type>()) != null;
     }
 }

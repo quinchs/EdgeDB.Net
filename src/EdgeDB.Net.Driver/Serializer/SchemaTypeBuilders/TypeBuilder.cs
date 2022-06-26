@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace EdgeDB.Serializer
 {
@@ -130,8 +131,8 @@ namespace EdgeDB.Serializer
                                    type.GetConstructor(new Type[] { typeof(IDictionary<string, object?>) })
                                        ?.GetCustomAttribute<EdgeDBDeserializerAttribute>() != null;
 
-            // allow abstract passthru
-            return type.IsAbstract ? true : (type.IsClass || type.IsValueType) && !type.IsSealed && validConstructor;
+            // allow abstract & anon types passthru
+            return type.IsAbstract || type.GetCustomAttribute<CompilerGeneratedAttribute>() != null ? true : (type.IsClass || type.IsValueType) && !type.IsSealed && validConstructor;
         }
 
         internal static bool TryGetCollectionParser(Type type, out Func<Array, Type, object>? builder)
@@ -306,6 +307,48 @@ namespace EdgeDB.Serializer
 
         private TypeDeserializerFactory CreateDefaultFactory()
         {
+            // if type is anon type
+            if (_type.GetCustomAttribute<CompilerGeneratedAttribute>() != null)
+            {
+                var props = _type.GetProperties();
+
+                return (data) =>
+                {
+                    object?[] ctorParams = new object[props.Length];
+
+                    for (int i = 0; i != ctorParams.Length; i++)
+                    {
+                        var prop = props[i];
+                        
+                        if(!data.TryGetValue(TypeBuilder.NamingStrategy.GetName(prop), out var value))
+                        {
+                            ctorParams[i] = ReflectionUtils.GetDefault(prop.PropertyType);
+                        }
+
+                        var valueType = value?.GetType();
+
+                        if (valueType == null)
+                        {
+                            ctorParams[i] = ReflectionUtils.GetDefault(prop.PropertyType);
+                            continue;
+                        }
+
+                        if (valueType.IsAssignableTo(prop.PropertyType))
+                        {
+                            ctorParams[i] = value; 
+                        }
+                        else if (prop.PropertyType.IsEnum && value is string str) // enums
+                        {
+                            ctorParams[i] = Enum.Parse(prop.PropertyType, str);
+                        }
+                        else
+                            throw new InvalidOperationException($"Cannot assign property {prop.Name} with type {valueType}");
+                    }
+
+                    return Activator.CreateInstance(_type, ctorParams)!;
+                };
+            }
+
             // if type has custom method builder
             if (_type.TryGetCustomBuilder(out var methodInfo))
             {

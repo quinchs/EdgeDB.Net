@@ -13,12 +13,20 @@ namespace EdgeDB.QueryNodes
     {
         public InsertNode(NodeBuilder builder) : base(builder) { }
 
+        private string BuildInsertLambdaShape(LambdaExpression expression)
+        {
+            return $"{{ {ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context)} }}";
+        }
+        
         private string BuildInsertShape(Type? shapeType = null, object? shapeValue = null)
         {
             List<string> shape = new();
             
             var type = shapeType ?? Context.CurrentType;
             var value = shapeValue ?? Context.Value;
+
+            if (value is LambdaExpression expression)
+                return BuildInsertLambdaShape(expression);
 
             var properties = type.GetProperties().Where(x => x.GetCustomAttribute<EdgeDBIgnoreAttribute>() == null);
 
@@ -74,24 +82,35 @@ namespace EdgeDB.QueryNodes
         public override void Visit()
         {
             var shape = BuildInsertShape();
-            var insert = $"insert {Context.CurrentType.GetEdgeDBTypeName()} {shape}";
+            Query.Append($"insert {Context.CurrentType.GetEdgeDBTypeName()} {shape}");
+        }
 
-            if (Context.SetAsGlobal && Context.GlobalName != null)
+        public override void FinalizeQuery()
+        {
+            if(Context.SetAsGlobal && Context.GlobalName != null)
             {
-                SetGlobal(Context.GlobalName, new SubQuery(insert));
+                SetGlobal(Context.GlobalName, new SubQuery($"({Query})"));
+                Query.Clear();
             }
-            else
-                Query.Append(insert);
         }
 
         public void UnlessConflictOn(LambdaExpression selector)
         {
-            Query.Append($" unless conflict on {ExpressionTranslator.Translate(selector, Builder.QueryVariables)}");
+            Query.Append($" unless conflict on {ExpressionTranslator.Translate(selector, Builder.QueryVariables, Context)}");
         }
 
         public void ElseDefault()
         {
             Query.Append($" else (select {Context.CurrentType.GetEdgeDBTypeName()})");
+        }
+
+        public void Else(IQueryBuilder builder)
+        {
+            var result = builder.Build();
+
+            Query.Append($" else ({result.Query})");
+            foreach (var variable in result.Parameters)
+                SetVariable(variable.Key, variable.Value);
         }
     }
 }

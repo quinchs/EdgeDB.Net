@@ -18,7 +18,7 @@ namespace EdgeDB.QueryNodes
 
         public override void FinalizeQuery()
         {
-            var exp = ExpressionTranslator.Translate(Context.UpdateExpression!, Builder.QueryVariables);
+            var exp = ExpressionTranslator.Translate(Context.UpdateExpression!, Builder.QueryVariables, Context);
             Query.Append($" set {{ {exp} }}");
 
             if (Context.SetAsGlobal && Context.GlobalName != null)
@@ -33,7 +33,7 @@ namespace EdgeDB.QueryNodes
             if (filter is null)
                 throw new ArgumentNullException(nameof(filter), "No expression was passed in for a filter node");
 
-            var parsedExpression = ExpressionTranslator.Translate(filter, Builder.QueryVariables);
+            var parsedExpression = ExpressionTranslator.Translate(filter, Builder.QueryVariables, Context);
             Query.Append($" filter {parsedExpression}");
         }
     }

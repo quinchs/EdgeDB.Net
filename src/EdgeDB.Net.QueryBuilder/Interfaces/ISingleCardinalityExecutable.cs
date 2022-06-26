@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Interfaces
 {
-    public interface ISingleCardinalityExecutable<TType>
+    public interface ISingleCardinalityExecutable<TType> : IQueryBuilder
     {
-        Task<TType> ExecuteAsync(IEdgeDBQueryable edgedb);    
+        Task<TType?> ExecuteAsync(IEdgeDBQueryable edgedb, CancellationToken token = default);    
     }
 }
