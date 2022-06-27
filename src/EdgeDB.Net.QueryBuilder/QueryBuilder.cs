@@ -112,7 +112,7 @@ namespace EdgeDB
         public BuiltQuery Build()
             => InternalBuild();
 
-        public BuiltQuery BuildWithGlobals()
+        internal BuiltQuery BuildWithGlobals()
             => InternalBuild(false);
 
         #region Root nodes
@@ -461,6 +461,7 @@ namespace EdgeDB
         IReadOnlyCollection<QueryNode> IQueryBuilder.Nodes => _nodes;
         IReadOnlyDictionary<string, object?> IQueryBuilder.Globals => _queryGlobals;
         IQueryBuilder<TType> IQueryBuilder<TType>.With(string name, object? value) => With(name, value);
+        BuiltQuery IQueryBuilder.BuildWithGlobals() => BuildWithGlobals();
         #endregion
     }
 
