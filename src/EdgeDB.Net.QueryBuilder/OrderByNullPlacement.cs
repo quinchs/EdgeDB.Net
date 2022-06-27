@@ -15,6 +15,10 @@ namespace EdgeDB
         ///     Places <see langword="null"/> values at the front of the ordered set.
         /// </summary>
         First,
+
+        /// <summary>
+        ///     Places <see langword="null"/> values at the end of the ordered set.
+        /// </summary>
         Last
     }
 }

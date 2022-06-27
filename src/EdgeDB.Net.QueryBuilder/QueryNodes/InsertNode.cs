@@ -124,6 +124,7 @@ namespace EdgeDB.QueryNodes
         public void UnlessConflict()
         {
             _autogenerateUnlessConflict = true;
+            RequiresIntrospection = true;
         }
 
         public void UnlessConflictOn(LambdaExpression selector)
