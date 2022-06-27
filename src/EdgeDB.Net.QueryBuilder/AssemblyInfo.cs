@@ -1,6 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("EdgeDB.Examples.ExampleApp")]
 [assembly: InternalsVisibleTo("EdgeDB.DotnetTool")]
 [assembly: InternalsVisibleTo("EdgeDB.Tests.Unit")]
 [assembly: InternalsVisibleTo("EdgeDB.Tests.Integration")]

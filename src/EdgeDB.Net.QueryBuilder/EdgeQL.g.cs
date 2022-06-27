@@ -1709,10 +1709,6 @@ namespace EdgeDB
 
         #endregion links
 
-        #region variables
-
-        #endregion variables
-
         internal static Dictionary<string, IEdgeQLOperator> FunctionOperators = new()
         {
             { "String.ToLower", new StringToLower()},

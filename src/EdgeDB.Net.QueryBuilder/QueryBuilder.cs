@@ -12,6 +12,10 @@ using System.Threading.Tasks;
 
 namespace EdgeDB
 {
+    /// <summary>
+    ///     Represents a query builder used to build queries against <typeparamref name="TType"/>.
+    /// </summary>
+    /// <typeparam name="TType"></typeparam>
     public class QueryBuilder<TType> : IQueryBuilder<TType>
     {
         private readonly List<QueryNode> _nodes;
@@ -109,6 +113,13 @@ namespace EdgeDB
             };
         }
 
+        /// <summary>
+        ///     Builds the current query into a <see cref="BuiltQuery"/>.
+        /// </summary>
+        /// <remarks>
+        ///     This method resets this query builder.
+        /// </remarks>
+        /// <returns>A built query containing the query itself and any query variables used within the query.</returns>
         public BuiltQuery Build()
             => InternalBuild();
 
@@ -116,6 +127,7 @@ namespace EdgeDB
             => InternalBuild(false);
 
         #region Root nodes
+        /// <inheritdoc cref="IQueryBuilder{TType}.With(string, object?)"/>
         public QueryBuilder<TType> With(string name, object? value)
         {
             if (QueryObjectManager.TryGetObjectId(value, out var id))
@@ -124,22 +136,15 @@ namespace EdgeDB
             _queryGlobals[name] = value;
             return this;
         }
-        
+
+        /// <inheritdoc/>
         public ISelectQuery<TType> Select()
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType)));
             return this;
         }
 
-        public ISelectQuery<TNewType> Select<TNewType>(Expression<Func<TNewType>>? shape = null)
-        {
-            AddNode<SelectNode>(new SelectContext(typeof(TNewType))
-            {
-                Shape = shape
-            });
-            return EnterNewType<TNewType>();
-        }
-
+        /// <inheritdoc cref="IQueryBuilder{TType}.Select(Expression{Func{QueryContext, TType?}})"/>
         public ISelectQuery<TType> Select(Expression<Func<QueryContext, TType?>> shape)
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType))
@@ -149,6 +154,7 @@ namespace EdgeDB
             return this;
         }
 
+        /// <inheritdoc cref="IQueryBuilder{TType}.Select{TNewType}(Expression{Func{QueryContext, TNewType?}})"/>
         public ISelectQuery<TNewType> Select<TNewType>(Expression<Func<QueryContext, TNewType?>> shape)
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType))
@@ -158,6 +164,7 @@ namespace EdgeDB
             return EnterNewType<TNewType>();
         }
 
+        /// <inheritdoc/>
         public IInsertQuery<TType> Insert(TType value, bool returnInsertedValue = true)
         {
             var selectedGlobal = returnInsertedValue ? QueryUtils.GenerateRandomVariableName() : null;
@@ -179,6 +186,7 @@ namespace EdgeDB
             return this;
         }
 
+        /// <inheritdoc/>
         public IInsertQuery<TType> Insert(Expression<Func<QueryContext, TType>> value, bool returnInsertedValue = true)
         {
             var selectedGlobal = returnInsertedValue ? QueryUtils.GenerateRandomVariableName() : null;
@@ -200,6 +208,7 @@ namespace EdgeDB
             return this;
         }
 
+        /// <inheritdoc/>
         public IUpdateQuery<TType> Update(Expression<Func<TType, TType>> updateFunc, bool returnUpdatedValue = true)
         {
             var selectedGlobal = returnUpdatedValue ? QueryUtils.GenerateRandomVariableName() : null;
@@ -220,7 +229,8 @@ namespace EdgeDB
             
             return this;
         }
-        
+
+        /// <inheritdoc/>
         public IDeleteQuery<TType> Delete
         {
             get
@@ -229,7 +239,6 @@ namespace EdgeDB
                 return this;
             }
         }
-        
         #endregion
 
         #region Generic sub-query methods
@@ -438,22 +447,26 @@ namespace EdgeDB
             => LimitExp(limit);
         #endregion
 
-        async Task<IReadOnlyCollection<TType?>> IMultiCardinalityExecutable<TType>.ExecuteAsync(IEdgeDBQueryable edgedb, CancellationToken token)
+        private async ValueTask<BuiltQuery> IntrospectAndBuildAsync(IEdgeDBQueryable edgedb, CancellationToken token)
         {
-            _schemaInfo ??= await SchemaIntrospector.GetOrCreateSchemaIntrospectionAsync(edgedb, token).ConfigureAwait(false);
+            if(_nodes.Any(x => x.RequiresIntrospection))
+                _schemaInfo ??= await SchemaIntrospector.GetOrCreateSchemaIntrospectionAsync(edgedb, token).ConfigureAwait(false);
 
             var result = Build();
             _nodes.Clear();
             _queryGlobals.Clear();
+
+            return result;
+        }
+
+        async Task<IReadOnlyCollection<TType?>> IMultiCardinalityExecutable<TType>.ExecuteAsync(IEdgeDBQueryable edgedb, CancellationToken token)
+        {
+            var result = await IntrospectAndBuildAsync(edgedb, token).ConfigureAwait(false);
             return await edgedb.QueryAsync<TType>(result.Query, result.Parameters, token).ConfigureAwait(false);
         }
         async Task<TType?> ISingleCardinalityExecutable<TType>.ExecuteAsync(IEdgeDBQueryable edgedb, CancellationToken token)
         {
-            _schemaInfo ??= await SchemaIntrospector.GetOrCreateSchemaIntrospectionAsync(edgedb, token).ConfigureAwait(false);
-
-            var result = Build();
-            _nodes.Clear();
-            _queryGlobals.Clear();
+            var result = await IntrospectAndBuildAsync(edgedb, token).ConfigureAwait(false);
             return await edgedb.QuerySingleAsync<TType>(result.Query, result.Parameters, token).ConfigureAwait(false);
         }
 
@@ -465,6 +478,10 @@ namespace EdgeDB
         #endregion
     }
 
+    /// <summary>
+    ///     Represents a generic query builder for querying against <typeparamref name="TType"/>.
+    /// </summary>
+    /// <typeparam name="TType">The type of which queries will be preformed with.</typeparam>
     public interface IQueryBuilder<TType> : 
         IQueryBuilder, 
         ISelectQuery<TType>,
@@ -473,38 +490,147 @@ namespace EdgeDB
         IUnlessConflictOn<TType>,
         IInsertQuery<TType>
     {
+        /// <summary>
+        ///     Adds a value to a <c>WITH</c> statement.
+        /// </summary>
+        /// <remarks>
+        ///     This value can be used later within queries by using a lambda with the <see cref="QueryContext"/> object,
+        ///     then calling <see cref="QueryContext.Global{TType}(string)"/>.
+        /// </remarks>
+        /// <param name="name">The name of the value.</param>
+        /// <param name="value">The value to add.</param>
+        /// <returns>
+        ///     The current query builder.
+        /// </returns>
         IQueryBuilder<TType> With(string name, object? value);
+
+        /// <summary>
+        ///     Adds a <c>SELECT</c> statement selecting the current <typeparamref name="TType"/> with a autogenerated shape.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="ISelectQuery{TType}"/>.
+        /// </returns>
         ISelectQuery<TType> Select();
-        ISelectQuery<TNewType> Select<TNewType>(Expression<Func<TNewType>>? shape = null);
+
+        /// <summary>
+        ///     Adds a <c>SELECT</c> statement selecting the current <typeparamref name="TType"/> with the given shape.
+        /// </summary>
+        /// <remarks>
+        ///     To define a shape, use <see cref="QueryContext.Include{TType}"/> to include a property. any other 
+        ///     methods/values will be treated as computed values.
+        /// </remarks>
+        /// <typeparam name="TNewType">The type to select.</typeparam>
+        /// <param name="shape">The shape to select.</param>
+        /// <returns>
+        ///     A <see cref="ISelectQuery{TType}"/>.
+        /// </returns>
         ISelectQuery<TType> Select(Expression<Func<QueryContext, TType?>> shape);
+
+        /// <summary>
+        ///     Adds a <c>SELECT</c> statement selecting the type <typeparamref name="TNewType"/> with the given shape.
+        /// </summary>
+        /// <remarks>
+        ///     To define a shape, use <see cref="QueryContext.Include{TType}"/> to include a property. any other 
+        ///     methods/values will be treated as computed values.
+        /// </remarks>
+        /// <typeparam name="TNewType">The type to select.</typeparam>
+        /// <param name="shape">The shape to select.</param>
+        /// <returns>
+        ///     A <see cref="ISelectQuery{TNewType}"/>.
+        /// </returns>
         ISelectQuery<TNewType> Select<TNewType>(Expression<Func<QueryContext, TNewType?>> shape);
+
+        /// <summary>
+        ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
+        /// </summary>
+        /// <param name="value">The value to insert.</param>
+        /// <param name="returnInsertedValue">
+        ///     whether or not to implicitly add a select statement to return the inserted value.
+        /// </param>
+        /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
         IInsertQuery<TType> Insert(TType value, bool returnInsertedValue = true);
+
+        /// <summary>
+        ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
+        /// </summary>
+        /// <param name="value">The callback containing the value initialization to insert.</param>
+        /// <param name="returnInsertedValue">
+        ///     whether or not to implicitly add a select statement to return the inserted value.
+        /// </param>
+        /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
         IInsertQuery<TType> Insert(Expression<Func<QueryContext, TType>> value, bool returnInsertedValue = true);
+
+        /// <summary>
+        ///     Adds a <c>UPDATE</c> statement updating an instance of <typeparamref name="TType"/>.
+        /// </summary>
+        /// <param name="updateFunc">
+        ///     The callback used to update <typeparamref name="TType"/>. The first parameter is the old value.
+        /// </param>
+        /// <param name="returnUpdatedValue">
+        ///     whether or not to implicitly add a select statement to return the inserted value.
+        /// </param>
+        /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
         IUpdateQuery<TType> Update(Expression<Func<TType, TType>> updateFunc, bool returnUpdatedValue = true);
+
+        /// <summary>
+        ///     Adds a <c>DELETE</c> statement deleting an instance of <typeparamref name="TType"/>.
+        /// </summary>
         IDeleteQuery<TType> Delete { get; }
     }
+
+    /// <summary>
+    ///     Represents a generic query builder with a build function.
+    /// </summary>
     public interface IQueryBuilder
     {
         internal IReadOnlyCollection<QueryNode> Nodes { get; }
         internal IReadOnlyDictionary<string, object?> Globals { get; }
         
+        /// <summary>
+        ///     Builds the current query.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="BuiltQuery"/>.
+        /// </returns>
         BuiltQuery Build();
 
         internal BuiltQuery BuildWithGlobals();
     }
 
+    /// <summary>
+    ///     Represents a built query.
+    /// </summary>
     [System.Diagnostics.DebuggerDisplay(@"{Query,nq}")]
     public class BuiltQuery 
     {
+        /// <summary>
+        ///     Gets the query text.
+        /// </summary>
         public string Query { get; init; }
+
+        /// <summary>
+        ///     Gets a collection of parameters for the query.
+        /// </summary>
         public IDictionary<string, object?>? Parameters { get; init; }
         internal IDictionary<string, object?>? Globals { get; init; }
 
+        /// <summary>
+        ///     Creates a new built query.
+        /// </summary>
+        /// <param name="query">The query text.</param>
         public BuiltQuery(string query)
         {
             Query = query;
         }
 
+        /// <summary>
+        ///     Prettifies the query text.
+        /// </summary>
+        /// <remarks>
+        ///     This method uses alot of regex and can be unreliable, if 
+        ///     you're using this in a production setting please use with care.
+        /// </remarks>
+        /// <returns>A prettified version of <see cref="Query"/>.</returns>
         public string Prettify()
         {
             // add newlines

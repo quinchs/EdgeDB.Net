@@ -6,8 +6,20 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Interfaces
 {
+    /// <summary>
+    ///     Represents an executable query with one or more returning objects.
+    /// </summary>
+    /// <typeparam name="TType">The object the query will return.</typeparam>
     public interface IMultiCardinalityExecutable<TType> : IQueryBuilder
     {
+        /// <summary>
+        ///     Executes the current query.
+        /// </summary>
+        /// <param name="edgedb">The client to preform the query on.</param>
+        /// <param name="token">A cancellation token to cancel the asynchronous operation.</param>
+        /// <returns>
+        ///     A read-only collection of <typeparamref name="TType"/>.
+        /// </returns>
         Task<IReadOnlyCollection<TType?>> ExecuteAsync(IEdgeDBQueryable edgedb, CancellationToken token = default);
     }
 }
