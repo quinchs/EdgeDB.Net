@@ -29,8 +29,14 @@ namespace EdgeDB.QueryNodes
                 {
                     var subQuery = queryBuilder.Build();
                     value = new SubQuery($"({subQuery.Query})");
-                    foreach (var variable in subQuery.Parameters)
-                        SetVariable(variable.Key, variable.Value);
+
+                    if(subQuery.Parameters is not null)
+                        foreach (var variable in subQuery.Parameters)
+                            SetVariable(variable.Key, variable.Value);
+
+                    if (subQuery.Globals is not null)
+                        foreach (var global in subQuery.Globals)
+                            SetGlobal(global.Key, global.Value);
                 }
 
                 values.Add($"{kvp.Key} := {QueryUtils.ParseObject(value)}");

@@ -9,7 +9,7 @@ namespace EdgeDB
 {
     internal class NodeContext
     {
-        public bool SetAsGlobal { get; init; }
+        public bool SetAsGlobal { get; set; }
         public string? GlobalName { get; init; }
         public Type CurrentType { get; init; }
 

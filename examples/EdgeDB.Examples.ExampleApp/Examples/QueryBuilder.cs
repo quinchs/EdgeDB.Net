@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using EdgeDB.Schema;
+using EdgeDB.Serializer;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,7 +35,7 @@ namespace EdgeDB.ExampleApp.Examples
             // get or create john
             var john = await builder
                 .Insert(new LinkPerson { Email = "johndoe@email.com", Name = "John Doe" })
-                .UnlessConflictOn(x => x.Email)
+                .UnlessConflict()
                 .ElseReturn()
                 .ExecuteAsync(client);
 
@@ -46,7 +48,7 @@ namespace EdgeDB.ExampleApp.Examples
                     Email = "janedoe@email.com", 
                     BestFriend = ctx.Global<LinkPerson>("john") 
                 })
-                .UnlessConflictOn(x => x.Email)
+                .UnlessConflict()
                 .ElseReturn()
                 .ExecuteAsync(client);
 
@@ -69,58 +71,13 @@ namespace EdgeDB.ExampleApp.Examples
                     Name = "upsert demo",
                     Email = "upsert@mail.com"
                 })
-                .UnlessConflictOn(x => x.Email)
+                .UnlessConflict()
                 .Else(q => 
                     q.Update(old => new LinkPerson
                     { 
-                        Name = old.Name!.ToUpper()
+                        Name = old!.Name!.ToUpper()
                     })
-                );
-        }
-
-        public static string Prettify(string queryText)
-        {
-            // add newlines
-            var result = Regex.Replace(queryText, @"({|\(|\)|}|,)", m =>
-            {
-                switch (m.Groups[1].Value)
-                {
-                    case "{" or "(" or ",":
-                        if (m.Groups[1].Value == "{" && queryText[m.Index + 1] == '}')
-                            return m.Groups[1].Value;
-
-                        return $"{m.Groups[1].Value}\n";
-
-                    default:
-                        return $"{((m.Groups[1].Value == "}" && (queryText[m.Index - 1] == '{' || queryText[m.Index - 1] == '}')) ? "" : "\n")}{m.Groups[1].Value}{((queryText.Length != m.Index + 1 && (queryText[m.Index + 1] != ',')) ? "\n" : "")}";
-                }
-            }).Trim().Replace("\n ", "\n");
-
-            // clean up newline func
-            result = Regex.Replace(result, "\n\n", m => "\n");
-
-            // add indentation
-            result = Regex.Replace(result, "^", m =>
-            {
-                int indent = 0;
-
-                foreach (var c in result[..m.Index])
-                {
-                    if (c is '(' or '{')
-                        indent++;
-                    if (c is ')' or '}')
-                        indent--;
-                }
-
-                var next = result.Length != m.Index ? result[m.Index] : '\0';
-
-                if (next is '}' or ')')
-                    indent--;
-
-                return "".PadLeft(indent * 2);
-            }, RegexOptions.Multiline);
-
-            return result;
+                ).Build().Prettify();
         }
     }
 }

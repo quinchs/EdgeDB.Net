@@ -27,8 +27,6 @@ namespace EdgeDB.Serializer
         
         private readonly static ConcurrentDictionary<Type, TypeDeserializeInfo> _typeInfo = new();
         private readonly static List<string> _scannedAssemblies;
-
-        
         
         static TypeBuilder()
         {
@@ -132,7 +130,7 @@ namespace EdgeDB.Serializer
                                        ?.GetCustomAttribute<EdgeDBDeserializerAttribute>() != null;
 
             // allow abstract & anon types passthru
-            return type.IsAbstract || type.GetCustomAttribute<CompilerGeneratedAttribute>() != null ? true : (type.IsClass || type.IsValueType) && !type.IsSealed && validConstructor;
+            return type.IsAbstract || type.IsInterface || type.GetCustomAttribute<CompilerGeneratedAttribute>() != null || (type.IsClass || type.IsValueType) && !type.IsSealed && validConstructor;
         }
 
         internal static bool TryGetCollectionParser(Type type, out Func<Array, Type, object>? builder)
@@ -234,7 +232,12 @@ namespace EdgeDB.Serializer
 
                 // register them with the default builder
                 foreach (var type in types)
-                    _typeInfo.TryAdd(type, new(type));
+                {
+                    var info = new TypeDeserializeInfo(type);
+                    _typeInfo.TryAdd(type, info);
+                    foreach (var parentType in _typeInfo.Where(x => (x.Key.IsInterface || x.Key.IsAbstract) && x.Key != type && type.IsAssignableTo(x.Key)))
+                        parentType.Value.AddOrUpdateChildren(info);
+                }
 
                 // mark this assembly as scanned
                 _scannedAssemblies.Add(identifier);
@@ -251,7 +254,7 @@ namespace EdgeDB.Serializer
             // look for any types that inherit already defined abstract types
             foreach (var abstractType in _typeInfo.Where(x => x.Value.IsAbtractType))
             {
-                var childTypes = assembly.DefinedTypes.Where(x => !_typeInfo.ContainsKey(x) && x.IsSubclassOf(abstractType.Key));
+                var childTypes = assembly.DefinedTypes.Where(x => (x.IsSubclassOf(abstractType.Key) || x.ImplementedInterfaces.Contains(abstractType.Key) || x.IsAssignableTo(abstractType.Key)));
                 abstractType.Value.AddOrUpdateChildren(childTypes.Select(x => new TypeDeserializeInfo(x)));
             }
         }
@@ -270,7 +273,7 @@ namespace EdgeDB.Serializer
         public string EdgeDBTypeName { get; }
 
         public bool IsAbtractType
-            => _type.IsAbstract;
+            => _type.IsAbstract || _type.IsInterface;
 
         public Dictionary<Type, TypeDeserializeInfo> Children { get; } = new();
 
@@ -292,12 +295,13 @@ namespace EdgeDB.Serializer
             EdgeDBTypeName = _type.GetCustomAttribute<EdgeDBTypeAttribute>()?.Name ?? _type.Name;
         }
 
+        public void AddOrUpdateChildren(TypeDeserializeInfo child)
+            => Children[child._type] = child;
+
         public void AddOrUpdateChildren(IEnumerable<TypeDeserializeInfo> children)
         {
-            foreach(var child in children)
-            {
-                Children[child._type] = child;
-            }
+            foreach (var child in children)
+                AddOrUpdateChildren(child);
         }
 
         public void UpdateFactory(TypeDeserializerFactory factory)
@@ -429,8 +433,19 @@ namespace EdgeDB.Serializer
                         prop.SetValue(instance, Enum.Parse(prop.PropertyType, str));
                         continue;
                     }
-
-                    prop.SetValue(instance, prop.PropertyType.ConvertValue(value));
+                    else
+                    {
+                        try
+                        {
+                            prop.SetValue(instance, prop.PropertyType.ConvertValue(value));
+                        }
+                        catch (Exception x)
+                        {
+                            var valueTypeName = value is IDictionary<string, object?> dict ? dict["__tname__"]?.ToString() : valueType.Name;
+                            throw new InvalidOperationException($"Failed to set {_type.Name}.{prop.Name} with type {valueTypeName} to {prop.PropertyType}.", x);
+                        }
+                    }
+                    
                 }
 
                 return instance;
