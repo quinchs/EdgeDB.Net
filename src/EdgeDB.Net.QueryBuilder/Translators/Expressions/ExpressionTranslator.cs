@@ -13,9 +13,9 @@ namespace EdgeDB
     internal abstract class ExpressionTranslator<TExpression> : ExpressionTranslator
         where TExpression : Expression
     {
-        public abstract string Translate(TExpression expression, ExpressionContext context);
+        public abstract string? Translate(TExpression expression, ExpressionContext context);
 
-        public override string Translate(Expression expression, ExpressionContext context)
+        public override string? Translate(Expression expression, ExpressionContext context)
         {
             return Translate((TExpression)expression, context);
         }
@@ -49,7 +49,7 @@ namespace EdgeDB
             => _expressionOperators.TryGetValue(type, out edgeqlOperator);
 
 
-        public abstract string Translate(Expression expression, ExpressionContext context);
+        public abstract string? Translate(Expression expression, ExpressionContext context);
 
         public static string Translate<TInnerExpression>(Expression<TInnerExpression> expression)
             => Translate(expression);
@@ -67,9 +67,9 @@ namespace EdgeDB
                 expType = expType.BaseType!;  
 
             if (_translators.TryGetValue(expType, out var translator))
-                return translator.Translate(expression, context);
+                return translator.Translate(expression, context)!;
 
-            throw new Exception("AAAA");
+            throw new NotSupportedException($"Failed to find translator for expression type: {expType.Name}.{expression.NodeType}");
         }
     }
 }

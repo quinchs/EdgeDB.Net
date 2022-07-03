@@ -1367,6 +1367,14 @@ namespace EdgeDB
         public static long Count<TType>(IEnumerable<TType> a) { return default!; }
         #endregion
 
+        #region Count
+        /// <summary>
+        ///     A function that represents the EdgeQL version of: <code>count(<paramref name="a"/>)</code>
+        /// </summary>
+        [EquivalentOperator(typeof(EdgeDB.Operators.SetsCount))]
+        public static long Count(IQueryBuilder a) { return default!; }
+        #endregion
+
         #region Enumerate<TType>
         /// <summary>
         ///     A function that represents the EdgeQL version of: <code>enumerate(<paramref name="a"/>)</code>

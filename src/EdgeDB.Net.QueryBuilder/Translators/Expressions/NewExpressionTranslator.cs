@@ -11,7 +11,7 @@ namespace EdgeDB.Translators.Expressions
 {
     internal class NewExpressionTranslator : ExpressionTranslator<NewExpression>
     {
-        public override string Translate(NewExpression expression, ExpressionContext context)
+        public override string? Translate(NewExpression expression, ExpressionContext context)
         {
             string[] shape = new string[expression.Arguments.Count];
 

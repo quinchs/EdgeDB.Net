@@ -11,7 +11,11 @@ namespace EdgeDB
     internal static class TypeExtensions
     {
         public static string GetEdgeDBTypeName(this Type type)
-            => type.GetCustomAttribute<EdgeDBTypeAttribute>()?.Name ?? type.Name;
+        {
+            var attr = type.GetCustomAttribute<EdgeDBTypeAttribute>();
+            var name = attr?.Name ?? type.Name;
+            return attr != null ? $"{(attr.ModuleName != null ? $"{attr.ModuleName}::" : "")}{name}" : name;
+        }
         public static string GetEdgeDBPropertyName(this MemberInfo info)
             => info.GetCustomAttribute<EdgeDBPropertyAttribute>()?.Name ?? TypeBuilder.NamingStrategy.GetName(info);
     }

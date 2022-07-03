@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Schema.DataTypes
 {
+    [EdgeDBType(ModuleName = "schema")]
     internal class ObjectType
     {
         [EdgeDBIgnore]

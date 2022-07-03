@@ -1,7 +1,9 @@
-﻿using EdgeDB.Operators;
+﻿using EdgeDB.Interfaces.Queries;
+using EdgeDB.Operators;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -36,6 +38,13 @@ namespace EdgeDB
         public TType Local<TType>(string name)
             => default!;
 
+        [EquivalentOperator(typeof(LocalReference))]
+        public TType UnsafeLocal<TType>(string name)
+            => default!;
+
+        public TType Raw<TType>(string query)
+            => default!;
+
         /// <summary>
         ///     Includes a property within a shape.
         /// </summary>
@@ -44,6 +53,16 @@ namespace EdgeDB
         ///     A mock reference to the property that this include statement is being assigned to.
         /// </returns>
         public TType Include<TType>()
+            => default!;
+
+        public TType IncludeLink<TType>(Expression<Func<TType>> shape)
+            => default!;
+
+        public TType[] IncludeMultiLink<TType>(Expression<Func<TType>> shape)
+            => default!;
+
+        public TCollection IncludeMultiLink<TType, TCollection>(Expression<Func<TType>> shape)
+            where TCollection : IEnumerable<TType>
             => default!;
     }
 }

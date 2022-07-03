@@ -1223,6 +1223,13 @@ sets:
       - parameters:
           - IEnumerable<TType>
 
+  - operator: "count({0})"
+    name: Count
+    return: long
+    functions:
+      - parameters:
+          - IQueryBuilder
+
   - operator: "enumerate({0})"
     name: Enumerate<TType>
     return: IEnumerable<Tuple<long, TType>>

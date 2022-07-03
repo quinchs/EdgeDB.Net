@@ -10,7 +10,7 @@ namespace EdgeDB.Translators.Expressions
 {
     internal class MemberExpressionTranslator : ExpressionTranslator<MemberExpression>
     {
-        public override string Translate(MemberExpression expression, ExpressionContext context)
+        public override string? Translate(MemberExpression expression, ExpressionContext context)
         {
             if(expression.Expression is ConstantExpression constant)
             {

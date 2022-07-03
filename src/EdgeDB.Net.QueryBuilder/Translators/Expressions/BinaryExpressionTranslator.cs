@@ -9,7 +9,7 @@ namespace EdgeDB.Translators.Expressions
 {
     internal class BinaryExpressionTranslator : ExpressionTranslator<BinaryExpression>
     {
-        public override string Translate(BinaryExpression expression, ExpressionContext context)
+        public override string? Translate(BinaryExpression expression, ExpressionContext context)
         {
             var left = TranslateExpression(expression.Left, context);
             var right = TranslateExpression(expression.Right, context);

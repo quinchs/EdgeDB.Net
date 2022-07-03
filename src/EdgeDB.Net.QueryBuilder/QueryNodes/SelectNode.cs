@@ -47,26 +47,33 @@ namespace EdgeDB.QueryNodes
                 return GetDefaultShape();
             }
 
+            if (Context.SelectExpressional)
+            {
+                return ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context);
+            }
+
             // if its a call to a global
-            if(Context.Shape.Body is MethodCallExpression)
+            if (Context.Shape.Body is MethodCallExpression)
             {
                 var exp = ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context);
                 Context.SelectName = exp;
                 return GetDefaultShape();
             }
-            else if (Context.Shape.Body is NewExpression)
+            else if (Context.Shape.Body is NewExpression or MemberInitExpression)
             {
-                return ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context);
+                return $"{{ {ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context)} }}";
             }
 
-            return "";
-            
+            throw new NotSupportedException($"Cannot use {Context.Shape.GetType().Name} as a shape");
         }
 
         public override void Visit()
         {
             var shape = GetShape();
-            Query.Append($"select {Context.SelectName ?? Context.CurrentType.GetEdgeDBTypeName()} {shape}");
+            if (Context.SelectExpressional)
+                Query.Append($"select {shape}");
+            else 
+                Query.Append($"select {Context.SelectName ?? Context.CurrentType.GetEdgeDBTypeName()} {shape}");
         }
 
         public void Filter(LambdaExpression expression)

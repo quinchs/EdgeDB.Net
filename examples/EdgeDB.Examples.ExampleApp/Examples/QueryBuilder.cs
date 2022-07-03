@@ -30,54 +30,11 @@ namespace EdgeDB.ExampleApp.Examples
 
         public async Task ExecuteAsync(EdgeDBClient client)
         {
-            var builder = new QueryBuilder<LinkPerson>();
+            var collection = client.GetCollection<LinkPerson>();
 
-            // get or create john
-            var john = await builder
-                .Insert(new LinkPerson { Email = "johndoe@email.com", Name = "John Doe" })
-                .UnlessConflict()
-                .ElseReturn()
-                .ExecuteAsync(client);
+            var wasDeleted = await collection.DeleteAsync(new LinkPerson { Email = "test@mail.com", Name = "test" });
 
-            // get or create jane
-            var jane = await builder
-                .With("john", john)
-                .Insert(ctx => new LinkPerson 
-                { 
-                    Name = "Jane Doe", 
-                    Email = "janedoe@email.com", 
-                    BestFriend = ctx.Global<LinkPerson>("john") 
-                })
-                .UnlessConflict()
-                .ElseReturn()
-                .ExecuteAsync(client);
-
-            Logger!.LogInformation("John result: {@john}", john);
-            Logger!.LogInformation("Jane result: {@jane}", jane);
-
-            // anon types
-            var anonPerson = await builder
-                .Select(ctx => new
-                {
-                    Name = ctx.Include<string>(),
-                    Email = ctx.Include<string>(),
-                    HasFriend = ctx.Local<LinkPerson>("BestFriend") != null
-                })
-                .ExecuteAsync(client);
-
-            var test = builder
-                .Insert(new LinkPerson()
-                {
-                    Name = "upsert demo",
-                    Email = "upsert@mail.com"
-                })
-                .UnlessConflict()
-                .Else(q => 
-                    q.Update(old => new LinkPerson
-                    { 
-                        Name = old!.Name!.ToUpper()
-                    })
-                ).Build().Prettify();
+            var t = new QueryBuilder<LinkPerson>().Select(() => EdgeQL.Count(new QueryBuilder<LinkPerson>().Delete)).Build();
         }
     }
 }

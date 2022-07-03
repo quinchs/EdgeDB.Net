@@ -15,8 +15,9 @@ namespace EdgeDB
         public Dictionary<string, Type> Parameters { get; }
         private readonly IDictionary<string, object?> _queryObjects;
 
-        public bool IsTypeReference { get; set; }
+        public bool StringWithoutQuotes { get; set; }
         public Type? LocalScope { get; set; }
+        public bool IsShape { get; set; }
 
 
         public ExpressionContext(NodeContext context, LambdaExpression rootExpression, IDictionary<string, object?> queryArguments)

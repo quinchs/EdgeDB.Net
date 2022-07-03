@@ -9,7 +9,7 @@ namespace EdgeDB.Translators.Expressions
 {
     internal class MemberInitExpressionTranslator : ExpressionTranslator<MemberInitExpression>
     {
-        public override string Translate(MemberInitExpression expression, ExpressionContext context)
+        public override string? Translate(MemberInitExpression expression, ExpressionContext context)
         {
             List<string> initializations = new();
 
@@ -20,7 +20,17 @@ namespace EdgeDB.Translators.Expressions
                     case MemberAssignment assignment:
                         {
                             var value = TranslateExpression(assignment.Expression, context);
-                            initializations.Add($"{assignment.Member.GetEdgeDBPropertyName()} := {value}");
+
+                            if (value is null)
+                                initializations.Add($"{assignment.Member.GetEdgeDBPropertyName()}");
+                            else if (context.IsShape)
+                            {
+                                initializations.Add($"{assignment.Member.GetEdgeDBPropertyName()}: {{ {value} }}");
+                                context.IsShape = false;
+                            }
+                            else
+                                initializations.Add($"{assignment.Member.GetEdgeDBPropertyName()} := {value}");
+
                         }
                         break;
                 }

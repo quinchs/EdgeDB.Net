@@ -26,7 +26,7 @@ namespace EdgeDB
                     SerializationMethod.Lower => $"\"{obj.ToString()?.ToLower()}\"",
                     SerializationMethod.Numeric => Convert.ChangeType(obj, type.BaseType ?? typeof(int)).ToString() ?? "{}",
                     _ => "{}"
-                } : Convert.ChangeType(obj, type.BaseType ?? typeof(int)).ToString() ?? "{}";
+                } : $"\"{obj.ToString()}\"";
             }
 
             return obj switch
