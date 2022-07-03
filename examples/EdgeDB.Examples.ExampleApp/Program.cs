@@ -4,11 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using System.Linq.Expressions;
-using static EdgeDB.ExampleApp.Examples.JsonResults;
-
-var t = "TTT";
-Expression<Func<Person, bool>> s = (x) => x.Name == t;
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()

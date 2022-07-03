@@ -32,9 +32,7 @@ namespace EdgeDB.ExampleApp.Examples
         {
             var collection = client.GetCollection<LinkPerson>();
 
-            var wasDeleted = await collection.DeleteAsync(new LinkPerson { Email = "test@mail.com", Name = "test" });
-
-            var t = new QueryBuilder<LinkPerson>().Select(() => EdgeQL.Count(new QueryBuilder<LinkPerson>().Delete)).Build();
+            // To be written
         }
     }
 }
