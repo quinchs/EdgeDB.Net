@@ -12,5 +12,10 @@ namespace EdgeDB
         {
             return new QueryableCollection<TType>(edgedb);
         }
+
+        internal static SubQuery SelectSubQuery(this Guid id, Type queryType)
+        {
+            return new SubQuery($"(select {queryType.GetEdgeDBTypeName()} filter .id = <uuid>\"{id}\")");
+        }
     }
 }

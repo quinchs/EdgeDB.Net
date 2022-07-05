@@ -49,19 +49,19 @@ namespace EdgeDB.QueryNodes
 
             if (Context.SelectExpressional)
             {
-                return ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context);
+                return ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context, Builder.QueryGlobals);
             }
 
             // if its a call to a global
             if (Context.Shape.Body is MethodCallExpression)
             {
-                var exp = ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context);
+                var exp = ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context, Builder.QueryGlobals);
                 Context.SelectName = exp;
                 return GetDefaultShape();
             }
             else if (Context.Shape.Body is NewExpression or MemberInitExpression)
             {
-                return $"{{ {ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context)} }}";
+                return $"{{ {ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context, Builder.QueryGlobals)} }}";
             }
 
             throw new NotSupportedException($"Cannot use {Context.Shape.GetType().Name} as a shape");
@@ -81,7 +81,7 @@ namespace EdgeDB.QueryNodes
             if (expression is null)
                 throw new ArgumentNullException(nameof(expression), "No expression was passed in for a filter node");
 
-            var parsedExpression = ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context);
+            var parsedExpression = ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context, Builder.QueryGlobals);
             Query.Append($" filter {parsedExpression}");
         }
 
@@ -90,7 +90,7 @@ namespace EdgeDB.QueryNodes
             if (selector is null)
                 throw new ArgumentNullException(nameof(selector), "No expression was passed in for an order by node");
 
-            var parsedExpression = ExpressionTranslator.Translate(selector, Builder.QueryVariables, Context);
+            var parsedExpression = ExpressionTranslator.Translate(selector, Builder.QueryVariables, Context, Builder.QueryGlobals);
             var direction = asc ? "asc" : "desc";
             Query.Append($" order by {parsedExpression} {direction}{(nullPlacement.HasValue ? $" {nullPlacement.Value.ToString().ToLowerInvariant()}" : "")}");
         }

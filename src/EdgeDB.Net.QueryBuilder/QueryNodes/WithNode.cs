@@ -21,25 +21,32 @@ namespace EdgeDB.QueryNodes
 
             List<string> values = new();
 
-            foreach(var kvp in Context.Values)
+            foreach(var global in Context.Values)
             {
-                var value = kvp.Value;
+                var value = global.Value;
 
                 if (value is IQueryBuilder queryBuilder)
                 {
-                    var subQuery = queryBuilder.Build();
-                    value = new SubQuery($"({subQuery.Query})");
+                    var query = queryBuilder.Build();
+                    value = new SubQuery($"({query.Query})");
 
-                    if(subQuery.Parameters is not null)
-                        foreach (var variable in subQuery.Parameters)
+                    if(query.Parameters is not null)
+                        foreach (var variable in query.Parameters)
                             SetVariable(variable.Key, variable.Value);
 
-                    if (subQuery.Globals is not null)
-                        foreach (var global in subQuery.Globals)
-                            SetGlobal(global.Key, global.Value);
+                    if (query.Globals is not null)
+                        foreach (var queryGlobal in query.Globals)
+                            SetGlobal(queryGlobal.Name, queryGlobal.Value, null);
                 }
 
-                values.Add($"{kvp.Key} := {QueryUtils.ParseObject(value)}");
+                if(value is SubQuery subQuery && subQuery.RequiresIntrospection)
+                {
+                    if (subQuery.RequiresIntrospection && SchemaInfo is null)
+                        throw new InvalidOperationException("Cannot build without introspection! A node requires query introspection.");
+                    value = subQuery.Build(SchemaInfo!);
+                }
+
+                values.Add($"{global.Name} := {QueryUtils.ParseObject(value)}");
             }
 
             Query.Append($"with {string.Join(", ", values)}");

@@ -23,7 +23,7 @@ namespace EdgeDB.QueryNodes
 
         public bool RequiresIntrospection { get; protected set; }
         public SchemaInfo? SchemaInfo { get; set; }
-        internal List<string> ReferencedGlobals { get; } = new();
+        internal List<int> ReferencedGlobals { get; } = new();
         internal List<string> ReferencedVariables { get; } = new();
         internal List<QueryNode> SubNodes { get; } = new();
 
@@ -48,10 +48,21 @@ namespace EdgeDB.QueryNodes
             Builder.QueryVariables[name] = value;
         }
 
-        protected void SetGlobal(string name, object? value)
+        protected void SetGlobal(string name, object? value, object? reference)
         {
-            ReferencedGlobals.Add(name);
-            Builder.QueryGlobals[name] = value;
+            var global = new QueryGlobal(name, value, reference);
+            Builder.QueryGlobals.Add(global);
+            ReferencedGlobals.Add(Builder.QueryGlobals.IndexOf(global));
+        }
+
+        protected string GetOrAddGlobal(object? reference, object? value)
+        {
+            var global = Builder.QueryGlobals.FirstOrDefault(x => x.Value == value);
+            if (global != null)
+                return global.Name;
+            var name = QueryUtils.GenerateRandomVariableName();
+            SetGlobal(name, value, reference);
+            return name;
         }
 
         internal BuiltQueryNode Build()

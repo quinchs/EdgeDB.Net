@@ -21,6 +21,6 @@ namespace EdgeDB.Interfaces.Queries
         IMultiCardinalityExecutable<TType> Filter(Expression<Func<TType, bool>> filter);
 
         /// <inheritdoc cref="Filter(Expression{Func{TType, bool}})"/>
-        IMultiCardinalityExecutable<TType> Filter(Expression<Func<QueryContext, TType, bool>> filter);
+        IMultiCardinalityExecutable<TType> Filter(Expression<Func<TType, QueryContext, bool>> filter);
     }
 }

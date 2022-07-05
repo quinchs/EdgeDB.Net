@@ -34,6 +34,6 @@ namespace EdgeDB.Interfaces.Queries
         IUnlessConflictOn<TType> UnlessConflictOn(Expression<Func<TType, object?>> propertySelector);
         
         /// <inheritdoc cref="UnlessConflictOn(Expression{Func{TType, object?}})"/>
-        IUnlessConflictOn<TType> UnlessConflictOn(Expression<Func<QueryContext, TType, object?>> propertySelector);
+        IUnlessConflictOn<TType> UnlessConflictOn(Expression<Func<TType, QueryContext, object?>> propertySelector);
     }
 }

@@ -38,8 +38,38 @@ namespace EdgeDB
         public TType Local<TType>(string name)
             => default!;
 
+        /// <summary>
+        ///     References a contextual local.
+        /// </summary>
+        /// <param name="name">The name of the local.</param>
+        /// <returns>
+        ///     A mock reference to a local with the given <paramref name="name"/>.
+        /// </returns>
+        [EquivalentOperator(typeof(LocalReference))]
+        public object? Local(string name)
+            => default!;
+
+        /// <summary>
+        ///     References a contextual local without checking the local context.
+        /// </summary>
+        /// <param name="name">The name of the local.</param>
+        /// <typeparam name="TType">The type of the local.</typeparam>
+        /// <returns>
+        ///     A mock reference to a local with the given <paramref name="name"/>.
+        /// </returns>
         [EquivalentOperator(typeof(LocalReference))]
         public TType UnsafeLocal<TType>(string name)
+            => default!;
+
+        /// <summary>
+        ///     References a contextual local without checking the local context.
+        /// </summary>
+        /// <param name="name">The name of the local.</param>
+        /// <returns>
+        ///     A mock reference to a local with the given <paramref name="name"/>.
+        /// </returns>
+        [EquivalentOperator(typeof(LocalReference))]
+        public object? UnsafeLocal(string name)
             => default!;
 
         public TType Raw<TType>(string query)

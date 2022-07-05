@@ -14,7 +14,7 @@ namespace EdgeDB.Translators.Expressions
         public override string? Translate(MethodCallExpression expression, ExpressionContext context)
         {
             // special case for local
-            if(expression.Method.DeclaringType == typeof(QueryContext))
+            if (expression.Method.DeclaringType == typeof(QueryContext))
             {
                 switch (expression.Method.Name)
                 {
@@ -31,8 +31,10 @@ namespace EdgeDB.Translators.Expressions
                                     context.LocalScope?.GetField(rawPath[i]) ??
                                     (MemberInfo?)context.NodeContext.CurrentType.GetProperty(rawPath[i]) ??
                                     context.NodeContext.CurrentType.GetField(rawPath[i]);
+
                                 if (prop is null)
                                     throw new InvalidOperationException($"The property \"{rawPath[i]}\" within \"{rawArg}\" is out of scope");
+
                                 parsedPath[i] = prop.GetEdgeDBPropertyName();
                             }
 
@@ -60,7 +62,7 @@ namespace EdgeDB.Translators.Expressions
                         }
                     default:
                         throw new NotImplementedException($"{expression.Method.Name} does not have an implementation. This is a bug, please file a github issue with your query to reproduce this exception.");
-                        
+
                 }
             }
 
@@ -94,9 +96,9 @@ namespace EdgeDB.Translators.Expressions
             }
 
             // check if its a known method 
-            if(EdgeQL.FunctionOperators.TryGetValue($"{expression.Method.DeclaringType?.Name}.{expression.Method.Name}", out edgeqlOperator))
+            if (EdgeQL.FunctionOperators.TryGetValue($"{expression.Method.DeclaringType?.Name}.{expression.Method.Name}", out edgeqlOperator))
             {
-                var args = (expression.Object != null ? new string[] { TranslateExpression(expression.Object, context) } : Array.Empty<string>()).Concat(expression.Arguments.Select(x => TranslateExpression(x, context))); 
+                var args = (expression.Object != null ? new string[] { TranslateExpression(expression.Object, context) } : Array.Empty<string>()).Concat(expression.Arguments.Select(x => TranslateExpression(x, context)));
                 return edgeqlOperator.Build(args.ToArray());
             }
 

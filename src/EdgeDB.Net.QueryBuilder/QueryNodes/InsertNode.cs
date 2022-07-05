@@ -20,7 +20,7 @@ namespace EdgeDB.QueryNodes
 
         private string BuildInsertLambdaShape(LambdaExpression expression)
         {
-            return $"{{ {ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context)} }}";
+            return $"{{ {ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context, Builder.QueryGlobals)} }}";
         }
         
         private string BuildInsertShape(Type? shapeType = null, object? shapeValue = null)
@@ -58,8 +58,7 @@ namespace EdgeDB.QueryNodes
                     if(QueryObjectManager.TryGetObjectId(subValue, out var id))
                     {
                         // insert a sub query
-                        var globalName = QueryUtils.GenerateRandomVariableName();
-                        SetGlobal(globalName, new SubQuery($"(select {property.PropertyType.GetEdgeDBTypeName()} filter .id = <uuid>\"{id}\")"));
+                        var globalName = GetOrAddGlobal(subValue, new SubQuery($"(select {property.PropertyType.GetEdgeDBTypeName()} filter .id = <uuid>\"{id}\")"));
                         shape.Add($"{propertyName} := {globalName}");
                         continue;
                     }
@@ -69,8 +68,16 @@ namespace EdgeDB.QueryNodes
                             shape.Add($"{propertyName} := {{}}");
                         else
                         {
-                            var globalName = QueryUtils.GenerateRandomVariableName();
-                            SetGlobal(globalName, new SubQuery($"(insert {property.PropertyType.GetEdgeDBTypeName()} {BuildInsertShape(property.PropertyType, subValue)})"));
+                            RequiresIntrospection = true;
+                            var globalName = GetOrAddGlobal(subValue, new SubQuery((info) =>
+                            {
+                                var name = property.PropertyType.GetEdgeDBTypeName();
+                                var exclusiveProps = QueryUtils.GetProperties(info, property.PropertyType, true);
+                                var exclusiveCondition = exclusiveProps.Any() ?
+                                    $" unless conflict on {(exclusiveProps.Count() > 1 ? $"({string.Join(", ", exclusiveProps.Select(x => $".{x.GetEdgeDBPropertyName()}"))})" : $".{exclusiveProps.First().GetEdgeDBPropertyName()}")} else (select {name})"
+                                    : string.Empty;
+                                return $"(insert {name} {BuildInsertShape(property.PropertyType, subValue)}{exclusiveCondition})";
+                            }));
                             shape.Add($"{propertyName} := {globalName}");
                         }
                         
@@ -116,7 +123,7 @@ namespace EdgeDB.QueryNodes
             
             if(Context.SetAsGlobal && Context.GlobalName != null)
             {
-                SetGlobal(Context.GlobalName, new SubQuery($"({Query})"));
+                SetGlobal(Context.GlobalName, new SubQuery($"({Query})"), null);
                 Query.Clear();
             }
         }
@@ -129,7 +136,7 @@ namespace EdgeDB.QueryNodes
 
         public void UnlessConflictOn(LambdaExpression selector)
         {
-            Query.Append($" unless conflict on {ExpressionTranslator.Translate(selector, Builder.QueryVariables, Context)}");
+            Query.Append($" unless conflict on {ExpressionTranslator.Translate(selector, Builder.QueryVariables, Context, Builder.QueryGlobals)}");
         }
 
         public void ElseDefault()
@@ -147,19 +154,12 @@ namespace EdgeDB.QueryNodes
             foreach (var node in userNodes)
                 node.Context.SetAsGlobal = false;
 
-            var globals = userNodes.SelectMany(x =>
-                x.ReferencedGlobals.Select(y =>
-                    new KeyValuePair<string, object?>(y, x.Builder.QueryGlobals[y])
-                )
-            ).ToDictionary(x => x.Key, x => x.Value);
+            foreach(var variable in builder.Variables)
+            {
+                Builder.QueryVariables[variable.Key] = variable.Value;
+            }
 
-            var variables = userNodes.SelectMany(x =>
-                x.ReferencedVariables.Select(y =>
-                    new KeyValuePair<string, object?>(y, x.Builder.QueryVariables[y])
-                )
-            );
-
-            var newBuilder = new QueryBuilder<object?>(userNodes.ToList(), globals, variables.ToDictionary(x => x.Key, x=> x.Value));
+            var newBuilder = new QueryBuilder<object?>(userNodes.ToList(), builder.Globals.ToList(), builder.Variables.ToDictionary(x => x.Key, x=> x.Value));
 
             var result = newBuilder.BuildWithGlobals();
             _children.Append($" else ({result.Query})");

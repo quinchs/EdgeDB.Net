@@ -1,4 +1,5 @@
-﻿using EdgeDB.Interfaces.Queries;
+﻿using EdgeDB.Interfaces;
+using EdgeDB.Interfaces.Queries;
 using EdgeDB.QueryNodes;
 using EdgeDB.Schema;
 using System;
@@ -70,23 +71,33 @@ namespace EdgeDB
         /// <returns>The added or updated value.</returns>
         public async Task<TType?> AddOrUpdateAsync(TType item, CancellationToken token = default)
         {
-            var props = await GetPropertiesAsync(false, false, token).ConfigureAwait(false);
-
-            // create the update factory.
-            var updateFactory = Expression.Lambda<Func<TType?, TType?>>(
-                Expression.MemberInit(
-                    Expression.New(typeof(TType)), props.Select(x => 
-                        Expression.Bind(x, Expression.MakeMemberAccess(Expression.Constant(item), x)))
-                    ),
-                Expression.Parameter(typeof(TType), "x")
-            );
+            var updateFactory = await QueryUtils.GenerateUpdateFactoryAsync(_edgedb, item, token).ConfigureAwait(false);
 
             return await QueryBuilder
                 .Insert(item)
                 .UnlessConflict()
                 .Else(q => 
-                    (Interfaces.ISingleCardinalityExecutable<TType?>)q.Update(updateFactory, false)
+                    (Interfaces.ISingleCardinalityExecutable<TType?>)q.Update(updateFactory!, false)
                 ).ExecuteAsync(_edgedb, token).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Attempts to add a value to this collection.
+        /// </summary>
+        /// <remarks>
+        ///     This method requires introspection and can preform more than one query 
+        ///     to cache the current clients schema.
+        /// </remarks>
+        /// <param name="item">The value to add.</param>
+        /// <param name="token">A cancellation token to cancel the asynchronous insert operation.</param>
+        /// <returns>
+        ///     <see langword="true"/> if the value was added successfully, otherwise <see langword="false"/>.
+        /// </returns>
+        public async Task<bool> TryAddAsync(TType item, CancellationToken token = default)
+        {
+            var query = QueryBuilder.Insert(item, false).UnlessConflict();
+            var result = await query.ExecuteAsync(_edgedb, token);
+            return result != null;
         }
 
         /// <summary>
@@ -102,12 +113,12 @@ namespace EdgeDB
         /// <param name="item">The item to get or add.</param>
         /// <param name="token">A cancellation token to cancel the asynchronous insert operation.</param>
         /// <returns>The inserted or conflicting item.</returns>
-        public Task<TType?> GetOrAddAsync(TType item, CancellationToken token = default)
+        public Task<TType> GetOrAddAsync(TType item, CancellationToken token = default)
             => QueryBuilder
                 .Insert(item)
                 .UnlessConflict()
                 .ElseReturn()
-                .ExecuteAsync(_edgedb, token);
+                .ExecuteAsync(_edgedb, token)!;
 
         /// <summary>
         ///     Deletes a value from the collection.
@@ -132,7 +143,7 @@ namespace EdgeDB
                     ).Any();
             
             // try to get exclusive property set on the instance
-            var props = await GetPropertiesAsync(exclusive: true, token: token).ConfigureAwait(false);
+            var props = await QueryUtils.GetPropertiesAsync<TType>(_edgedb, exclusive: true, token: token).ConfigureAwait(false);
 
             if (!props.Any())
                 throw new NotSupportedException("No unique constraints found to generate filter condition.");
@@ -165,25 +176,6 @@ namespace EdgeDB
         }
 
         /// <summary>
-        ///     Attempts to add a value to this collection.
-        /// </summary>
-        /// <remarks>
-        ///     This method requires introspection and can preform more than one query 
-        ///     to cache the current clients schema.
-        /// </remarks>
-        /// <param name="item">The value to add.</param>
-        /// <param name="token">A cancellation token to cancel the asynchronous insert operation.</param>
-        /// <returns>
-        ///     <see langword="true"/> if the value was added successfully, otherwise <see langword="false"/>.
-        /// </returns>
-        public async Task<bool> TryAddAsync(TType item, CancellationToken token = default)
-        {
-            var query = QueryBuilder.Insert(item, false).UnlessConflict();
-            var result = await query.ExecuteAsync(_edgedb, token);
-            return result != null;
-        }
-
-        /// <summary>
         ///     Deletes all values that match a given predicate.
         /// </summary>
         /// <param name="filter">The predicate which will determine if a value will be deleted.</param>
@@ -202,22 +194,37 @@ namespace EdgeDB
             CancellationToken token = default)
             => await QueryBuilder.Select().Filter(filter).ExecuteAsync(_edgedb, token);
 
-        private async ValueTask<IEnumerable<PropertyInfo>> GetPropertiesAsync(bool? exclusive = null, bool? @readonly = null, CancellationToken token = default)
-        {
-            var props = typeof(TType).GetProperties().Where(x => x.GetCustomAttribute<EdgeDBIgnoreAttribute>() == null);
+        /// <summary>
+        ///     Updates a given value in the collection with an update factory.
+        /// </summary>
+        /// <remarks>
+        ///     This method may require introspection of the schema to 
+        ///     generate the filter for the update statement.
+        /// </remarks>
+        /// <param name="value">The value to update.</param>
+        /// <param name="updateFunc">The factory containing the updated version.</param>
+        /// <param name="token">A cancellation token to cancel the asynchronous select operation.</param>
+        /// <returns>The updated item.</returns>
+        public async Task<TType?> UpdateAsync(TType value, Expression<Func<TType, TType>> updateFunc, CancellationToken token = default)
+            => (await QueryBuilder
+                .Update(updateFunc)
+                .Filter(await QueryUtils.GenerateUpdateFilterAsync(_edgedb, value, token))
+                .ExecuteAsync(_edgedb, token).ConfigureAwait(false)).FirstOrDefault();
 
-            var introspection = await SchemaIntrospector.GetOrCreateSchemaIntrospectionAsync(_edgedb, token).ConfigureAwait(false);
-
-            if (!introspection.TryGetObjectInfo(typeof(TType), out var info))
-                throw new NotSupportedException($"Cannot use {typeof(TType).Name} as there is no schema information for it.");
-
-            return props.Where(x =>
-            {
-                var edgedbName = x.GetEdgeDBPropertyName();
-                return info.Properties!.Any(x => x.Name == edgedbName && 
-                    (!exclusive.HasValue || x.IsExclusive == exclusive.Value) && 
-                    (!@readonly.HasValue || x.IsReadonly == @readonly.Value));
-            });
-        }
+        /// <summary>
+        ///     Updates a given value in the collection.
+        /// </summary>
+        /// <remarks>
+        ///     This method may require introspection of the schema to 
+        ///     generate the filter and update factory for the update statement.
+        /// </remarks>
+        /// <param name="value">The value to update.</param>
+        /// <param name="token">A cancellation token to cancel the asynchronous select operation.</param>
+        /// <returns>The updated item.</returns>
+        public async Task<TType?> UpdateAsync(TType value, CancellationToken token = default)
+            => (await QueryBuilder
+                .Update(await QueryUtils.GenerateUpdateFactoryAsync(_edgedb, value, token))
+                .Filter(await QueryUtils.GenerateUpdateFilterAsync(_edgedb, value, token))
+                .ExecuteAsync(_edgedb, token).ConfigureAwait(false)).FirstOrDefault();
     }
 }

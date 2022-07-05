@@ -50,7 +50,7 @@ namespace EdgeDB.Translators.Expressions
                 shape[i] = $"{edgedbName}{(isSetter ? " :=" : "")} {value}";
             }
             
-            return $"{{ {string.Join(", ", shape)} }}";
+            return string.Join(", ", shape);
         }
     }
 }

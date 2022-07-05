@@ -8,7 +8,7 @@ namespace EdgeDB.QueryNodes
 {
     internal class WithContext : NodeContext
     {
-        public Dictionary<string, object?>? Values { get; init; }
+        public List<QueryGlobal>? Values { get; init; }
         public WithContext(Type currentType) : base(currentType)
         {
         }

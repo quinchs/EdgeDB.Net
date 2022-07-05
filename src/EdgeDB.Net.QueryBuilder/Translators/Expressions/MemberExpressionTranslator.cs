@@ -14,12 +14,7 @@ namespace EdgeDB.Translators.Expressions
         {
             if(expression.Expression is ConstantExpression constant)
             {
-                object? value = expression.Member switch
-                {
-                    FieldInfo field => field.GetValue(constant.Value),
-                    PropertyInfo property => property.GetValue(constant.Value),
-                    _ => throw new InvalidOperationException("Cannot resolve constant member expression")
-                };
+                object? value = expression.Member.GetMemberValue(constant.Value);
 
                 var varName = context.AddVariable(value);
                 var type = PacketSerializer.GetEdgeQLType(expression.Type);

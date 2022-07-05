@@ -11,6 +11,9 @@ namespace EdgeDB.QueryNodes
     {
         public string? UpdateName { get; init; }
         public LambdaExpression? UpdateExpression { get; init; }
+        
+        internal Dictionary<string, SubQuery> ChildQueries { get; } = new();
+        
 
         public UpdateContext(Type currentType) : base(currentType)
         {

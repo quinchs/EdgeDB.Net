@@ -18,5 +18,28 @@ namespace EdgeDB
         }
         public static string GetEdgeDBPropertyName(this MemberInfo info)
             => info.GetCustomAttribute<EdgeDBPropertyAttribute>()?.Name ?? TypeBuilder.NamingStrategy.GetName(info);
+
+        public static Type GetMemberType(this MemberInfo info)
+        {
+            switch (info)
+            {
+                case PropertyInfo propertyInfo:
+                    return propertyInfo.PropertyType;
+                case FieldInfo fieldInfo:
+                    return fieldInfo.FieldType;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+        public static object? GetMemberValue(this MemberInfo info, object? obj)
+        {
+            return info switch
+            {
+                FieldInfo field => field.GetValue(obj),
+                PropertyInfo property => property.GetValue(obj),
+                _ => throw new InvalidOperationException("Cannot resolve constant member expression")
+            };
+        }
     }
 }
