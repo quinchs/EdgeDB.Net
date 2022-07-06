@@ -23,7 +23,6 @@ namespace EdgeDB.ExampleApp.Examples
             public LinkPerson? BestFriend { get; set; }
         }
 
-
         public async Task ExecuteAsync(EdgeDBClient client)
         {
             await QueryBuilderDemo(client);
@@ -119,7 +118,7 @@ namespace EdgeDB.ExampleApp.Examples
                 .Else(q =>
                     q.Update(old => new LinkPerson
                     {
-                        Name = old!.Name!.ToUpper()
+                        Name = EdgeQL.ToUpper(old.Name)
                     })
                 )
                 .BuildAsync(client))

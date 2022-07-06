@@ -45,7 +45,7 @@ namespace EdgeDB
         public static IDeleteQuery<TType> Delete<TType>()
             => new QueryBuilder<TType>().Delete;
     }
-    
+
     /// <summary>
     ///     Represents a query builder used to build queries against <typeparamref name="TType"/>.
     /// </summary>
@@ -121,9 +121,12 @@ namespace EdgeDB
             {
                 var with = new WithNode(new NodeBuilder(new WithContext(typeof(TType))
                 {
-                    Values = _queryGlobals
-                }, _queryGlobals, null, _queryVariables));
-                with.SchemaInfo = _schemaInfo;
+                    Values = _queryGlobals,
+                }, _queryGlobals, null, _queryVariables))
+                {
+                    SchemaInfo = _schemaInfo
+                };
+                
                 with.Visit();
                 nodes = nodes.Prepend(with).ToList();
             }
