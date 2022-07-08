@@ -44,7 +44,7 @@ namespace EdgeDB.QueryNodes
                 if(edgeqlType != null)
                 {
                     var varName = QueryUtils.GenerateRandomVariableName();
-                    SetVariable(varName, property.GetValue(Context.Value));
+                    SetVariable(varName, property.GetValue(value));
                     shape.Add($"{propertyName} := <{edgeqlType}>${varName}");
                     continue;
                 }
