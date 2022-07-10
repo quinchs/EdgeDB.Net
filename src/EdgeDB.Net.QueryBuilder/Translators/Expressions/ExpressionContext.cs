@@ -19,6 +19,8 @@ namespace EdgeDB
         public bool StringWithoutQuotes { get; set; }
         public Type? LocalScope { get; set; }
         public bool IsShape { get; set; }
+        
+        public bool HasInitializationOperator { get; set; }
 
 
         public ExpressionContext(NodeContext context, LambdaExpression rootExpression, 
@@ -39,10 +41,33 @@ namespace EdgeDB
             return name;
         }
 
+        public void SetVariable(string name, object? value)
+            => _queryObjects[name] = value;
+
         public bool TryGetGlobal(object? value, [MaybeNullWhen(false)]out QueryGlobal global)
         {
             global = _globals.FirstOrDefault(x => x.Reference == value);
             return global != null;
+        }
+
+        public string GetOrAddGlobal(object? reference, object? value)
+        {
+            if(reference is not null)
+            {
+                var global = _globals.FirstOrDefault(x => x.Value == value);
+                if (global != null)
+                    return global.Name;
+            }
+           
+            var name = QueryUtils.GenerateRandomVariableName();
+            SetGlobal(name, value, reference);
+            return name;
+        }
+
+        public void SetGlobal(string name, object? value, object? reference)
+        {
+            var global = new QueryGlobal(name, value, reference);
+            _globals.Add(global);
         }
 
         public ExpressionContext Enter(Action<ExpressionContext> func)

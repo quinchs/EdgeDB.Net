@@ -84,14 +84,25 @@ namespace EdgeDB.Translators.Expressions
 
                         // TODO: support variables & globals
                         var result = builder.BuildWithGlobals();
-                        if ((result.Parameters?.Any() ?? false) || (result.Globals?.Any() ?? false))
+                        if (result.Globals?.Any() ?? false)
                             throw new NotSupportedException("Cannot use queries with parameters or globals within a sub-query expression");
 
-                        argsArray[i] = $"({result.Query})";
+                        if (result.Parameters is not null)
+                            foreach (var parameter in result.Parameters)
+                                context.SetVariable(parameter.Key, parameter.Value);
+
+                        argsArray[i] = context.GetOrAddGlobal(null, new SubQuery($"({result.Query})"));
                     }
                     else
                         argsArray[i] = TranslateExpression(arg, context);
                 }
+
+                context.HasInitializationOperator = edgeqlOperator switch
+                {
+                    LinksAddLink or LinksRemoveLink => true,
+                    _ => false
+                };
+
                 return edgeqlOperator.Build(argsArray);
             }
 

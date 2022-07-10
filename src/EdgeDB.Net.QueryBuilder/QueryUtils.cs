@@ -1,8 +1,10 @@
 ﻿using EdgeDB.Interfaces;
 using EdgeDB.Interfaces.Queries;
 using EdgeDB.Schema;
+using EdgeDB.Serializer;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -15,6 +17,22 @@ namespace EdgeDB
     {
         private const string VARIABLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private static readonly Random _rng = new();
+
+        public static bool IsLink(Type type, out bool isMultiLink, [MaybeNullWhen(false)]out Type? innerLinkType)
+        {
+            innerLinkType = null;
+            isMultiLink = false;
+
+            Type? enumerableType = null;
+            if (type != typeof(string) && (enumerableType = type.GetInterfaces().FirstOrDefault(x => ReflectionUtils.IsInstanceOfGenericType(typeof(IEnumerable<>), x))) != null)
+            {
+                innerLinkType = enumerableType.GenericTypeArguments[0];
+                isMultiLink = true;
+                return true;
+            }
+
+            return TypeBuilder.IsValidObjectType(type);
+        }
 
         internal static string ParseObject(object? obj)
         {

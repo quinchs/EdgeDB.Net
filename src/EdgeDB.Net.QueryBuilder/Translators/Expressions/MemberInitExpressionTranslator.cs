@@ -104,6 +104,11 @@ namespace EdgeDB.Translators.Expressions
 
                             if (value is null)
                                 initializations.Add($"{memberName}");
+                            else if (context.HasInitializationOperator)
+                            {
+                                initializations.Add($"{memberName} {value}");
+                                context.HasInitializationOperator = false;
+                            }
                             else if (context.IsShape)
                             {
                                 initializations.Add($"{memberName}: {{ {value} }}");

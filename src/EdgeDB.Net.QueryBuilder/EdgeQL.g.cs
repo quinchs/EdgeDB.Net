@@ -1697,25 +1697,6 @@ namespace EdgeDB
 
         #endregion math
 
-        #region links
-
-        #region AddLink<TSource, TType>
-        /// <summary>
-        ///     A function that represents the EdgeQL version of: <code>+= <paramref name="element"/></code>
-        /// </summary>
-        [EquivalentOperator(typeof(EdgeDB.Operators.LinksAddLink))]
-        public static TSource AddLink<TSource, TType>(TSource source, TType element) where TSource : IEnumerable<TType>? { return default!; }
-        #endregion
-
-        #region RemoveLink<TSource, TType>
-        /// <summary>
-        ///     A function that represents the EdgeQL version of: <code>-= <paramref name="element"/></code>
-        /// </summary>
-        [EquivalentOperator(typeof(EdgeDB.Operators.LinksRemoveLink))]
-        public static TSource RemoveLink<TSource, TType>(TSource source, TType element) where TSource : IEnumerable<TType>? { return default!; }
-        #endregion
-
-        #endregion links
 
         internal static Dictionary<string, IEdgeQLOperator> FunctionOperators = new()
         {

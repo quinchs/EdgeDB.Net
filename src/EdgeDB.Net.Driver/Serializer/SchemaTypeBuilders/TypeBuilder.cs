@@ -137,7 +137,7 @@ namespace EdgeDB.Serializer
         {
             builder = null;
 
-            if (ReflectionUtils.IsSubclassOfRawGeneric(typeof(List<>), type))
+            if (ReflectionUtils.IsInstanceOfGenericType(typeof(List<>), type))
                 builder = CreateDynamicList;
 
             return builder != null;

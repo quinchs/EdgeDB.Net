@@ -26,20 +26,6 @@ namespace EdgeDB
             return false;
         }
 
-        public static bool IsSubclassOfRawGeneric(Type generic, Type? toCheck)
-        {
-            while (toCheck is not null && toCheck != typeof(object))
-            {
-                var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
-                if (generic == cur)
-                {
-                    return true;
-                }
-                toCheck = toCheck.BaseType;
-            }
-            return false;
-        }
-
         public static bool TryGetRawGeneric(Type generic, Type? toCheck, out Type? genericReference)
         {
             genericReference = null;

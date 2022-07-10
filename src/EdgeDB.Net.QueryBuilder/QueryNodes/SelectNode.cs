@@ -22,10 +22,11 @@ namespace EdgeDB.QueryNodes
             var propertyNames = properties.Select(x =>
             {
                 var name = x.GetCustomAttribute<EdgeDBPropertyAttribute>()?.Name ?? TypeBuilder.NamingStrategy.GetName(x);
-                if (TypeBuilder.IsValidObjectType(x.PropertyType))
+                if (QueryUtils.IsLink(x.PropertyType, out var isArray, out var innerType))
                 {
+                    var shapeType = isArray ? innerType! : x.PropertyType;
                     if(currentDepth < MAX_DEPTH)
-                        return $"{name}: {GetShape(x.PropertyType, currentDepth + 1)}";
+                        return $"{name}: {GetShape(shapeType, currentDepth + 1)}";
                     return null;
                 }
                 else

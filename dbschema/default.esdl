@@ -46,4 +46,12 @@ module default {
     }
     link best_friend -> LinkPerson;
   }
+
+  type MultiLinkPerson {
+    required property name -> str;
+    required property email -> str {
+      constraint exclusive;
+    }
+    multi link best_friends -> MultiLinkPerson;
+  }
 }

@@ -23,6 +23,13 @@ namespace EdgeDB.ExampleApp.Examples
             public LinkPerson? BestFriend { get; set; }
         }
 
+        public class MultiLinkPerson
+        {
+            public string? Name { get; set; }
+            public string? Email { get; set; }
+            public MultiLinkPerson[]? BestFriends { get; set; }
+        }
+
         public async Task ExecuteAsync(EdgeDBClient client)
         {
             await QueryBuilderDemo(client);
@@ -31,6 +38,15 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
+            var test = QueryBuilder.Update<MultiLinkPerson>(old => new MultiLinkPerson
+            {
+                BestFriends = EdgeQL.AddLink(QueryBuilder.Insert(new MultiLinkPerson
+                {
+                    Email = "test5@mail.com",
+                    Name = "test5"
+                }, false))
+            }).Build();
+
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 

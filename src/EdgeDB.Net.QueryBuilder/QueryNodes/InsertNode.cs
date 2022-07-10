@@ -1,5 +1,6 @@
 ﻿using EdgeDB.Serializer;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -13,6 +14,8 @@ namespace EdgeDB.QueryNodes
     {
         private bool _autogenerateUnlessConflict;
         private readonly StringBuilder _children;
+        private readonly List<Type> _subQueryMap = new();
+        
         public InsertNode(NodeBuilder builder) : base(builder) 
         {
             _children = new();
@@ -37,9 +40,13 @@ namespace EdgeDB.QueryNodes
 
             foreach(var property in properties)
             {
+                // might be multi link
+                var propType = property.PropertyType;
+                var isLink = QueryUtils.IsLink(property.PropertyType, out var isArray, out var innerType);
+                
                 var propertyName = property.GetEdgeDBPropertyName();
                 
-                var edgeqlType = PacketSerializer.GetEdgeQLType(property.PropertyType);
+                var edgeqlType = PacketSerializer.GetEdgeQLType(propType);
 
                 if(edgeqlType != null)
                 {
@@ -49,40 +56,27 @@ namespace EdgeDB.QueryNodes
                     continue;
                 }
 
-                // TODO: sub queries!
                 // might be a link?
-                if (TypeBuilder.IsValidObjectType(property.PropertyType))
+                if (isLink)
                 {
-                    // is it a object we've seen before?
                     var subValue = property.GetValue(value);
-                    if(QueryObjectManager.TryGetObjectId(subValue, out var id))
+
+                    if (subValue is null)
+                        shape.Add($"{propertyName} := {{}}");
+                    else if (isArray)
                     {
-                        // insert a sub query
-                        var globalName = GetOrAddGlobal(subValue, new SubQuery($"(select {property.PropertyType.GetEdgeDBTypeName()} filter .id = <uuid>\"{id}\")"));
-                        shape.Add($"{propertyName} := {globalName}");
-                        continue;
+                        List<string> subShape = new();
+                        foreach (var item in (IEnumerable)subValue!)
+                        {
+                            subShape.Add(BuildLinkResolver(innerType!, item));
+                        }
+
+                        shape.Add($"{propertyName} := {{ {string.Join(", ", subShape)} }}");
                     }
                     else
-                    {
-                        if (subValue is null)
-                            shape.Add($"{propertyName} := {{}}");
-                        else
-                        {
-                            RequiresIntrospection = true;
-                            var globalName = GetOrAddGlobal(subValue, new SubQuery((info) =>
-                            {
-                                var name = property.PropertyType.GetEdgeDBTypeName();
-                                var exclusiveProps = QueryUtils.GetProperties(info, property.PropertyType, true);
-                                var exclusiveCondition = exclusiveProps.Any() ?
-                                    $" unless conflict on {(exclusiveProps.Count() > 1 ? $"({string.Join(", ", exclusiveProps.Select(x => $".{x.GetEdgeDBPropertyName()}"))})" : $".{exclusiveProps.First().GetEdgeDBPropertyName()}")} else (select {name})"
-                                    : string.Empty;
-                                return $"(insert {name} {BuildInsertShape(property.PropertyType, subValue)}{exclusiveCondition})";
-                            }));
-                            shape.Add($"{propertyName} := {globalName}");
-                        }
-                        
-                        continue;
-                    }
+                        shape.Add($"{propertyName} := {BuildLinkResolver(propType, subValue)}");
+
+                    continue;
                 }
 
                 throw new Exception($"Failed to find method to serialize the property \"{property.PropertyType.Name}\" on type {type.Name}");
@@ -90,9 +84,48 @@ namespace EdgeDB.QueryNodes
 
             return $"{{ {string.Join(", ", shape)} }}";
         }
-        
+
+        private string BuildLinkResolver(Type type, object? value)
+        {
+            if (value is null)
+                return "{}";
+
+            if (QueryObjectManager.TryGetObjectId(value, out var id))
+            {
+                return InlineOrGlobal(
+                    type,
+                    new SubQuery($"(select {type.GetEdgeDBTypeName()} filter .id = <uuid>\"{id}\")"),
+                    value);
+            }
+            else
+            {
+                RequiresIntrospection = true;
+                return InlineOrGlobal(type, new SubQuery((info) =>
+                {
+                    var name = type.GetEdgeDBTypeName();
+                    var exclusiveProps = QueryUtils.GetProperties(info, type, true);
+                    var exclusiveCondition = exclusiveProps.Any() ?
+                        $" unless conflict on {(exclusiveProps.Count() > 1 ? $"({string.Join(", ", exclusiveProps.Select(x => $".{x.GetEdgeDBPropertyName()}"))})" : $".{exclusiveProps.First().GetEdgeDBPropertyName()}")} else (select {name})"
+                        : string.Empty;
+                    return $"(insert {name} {BuildInsertShape(type, value)}{exclusiveCondition})";
+                }), value);
+            }
+        }
+
+        private string InlineOrGlobal(Type type, object value, object? reference)
+        {
+            if (_subQueryMap.Contains(type) || (value is SubQuery sq && sq.RequiresIntrospection))
+                return GetOrAddGlobal(reference, value);
+
+            _subQueryMap.Add(type);
+            return value is SubQuery subQuery && subQuery.Query != null
+                ? subQuery.Query
+                : value.ToString()!;
+        }
+
         public override void Visit()
         {
+            _subQueryMap.Add(Context.CurrentType);
             var shape = BuildInsertShape();
             Query.Append($"insert {Context.CurrentType.GetEdgeDBTypeName()} {shape}");
         }

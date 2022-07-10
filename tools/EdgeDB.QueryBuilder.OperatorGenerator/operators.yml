@@ -1460,24 +1460,6 @@ math:
           - IEnumerable<decimal>
         return: decimal
 
-links:
-  - operator: "+= {1}"
-    name: AddLink<TSource, TType>
-    return: TSource
-    functions:
-      - parameters:
-          - TSource source
-          - TType element
-        filter: "where TSource : IEnumerable<TType>?"
-  - operator: "-= {1}"
-    name: RemoveLink<TSource, TType>
-    return: TSource
-    functions:
-      - parameters:
-          - TSource source
-          - TType element
-        filter: "where TSource : IEnumerable<TType>?"
-
 enums:
   - name: DurationTruncateUnit
     serialize_method: Lower
