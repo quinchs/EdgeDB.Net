@@ -38,16 +38,6 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
-            var result = await new QueryBuilder<MultiLinkPerson>().Select(ctx => new
-            {
-                Name = ctx.Include<string>(),
-                Email = ctx.Include<string>(),
-                BestFriendsBacklink = ctx.BackLink(x => x.BestFriends, () => new MultiLinkPerson
-                {
-                    Name = ctx.Include<string>()
-                })
-            }).ExecuteAsync(client);
-
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 
@@ -89,6 +79,26 @@ namespace EdgeDB.ExampleApp.Examples
                     QueryBuilder.Select<LinkPerson>()
                 )
             ).Build().Prettify();
+
+            // Backlinks
+            query = new QueryBuilder<MultiLinkPerson>().Select(ctx => new
+            {
+                Name = ctx.Include<string>(),
+                Email = ctx.Include<string>(),
+                BestFriends = ctx.IncludeLink(() => new MultiLinkPerson
+                {
+                    Name = ctx.Include<string>(),
+                    Email = ctx.Include<string>(),
+                }),
+                // The 'ReferencedFriends' will be equal to '.<best_friends[is MultiLinkPerson] { name, email }'
+                // The '[is x]' statement is only inserted when a property selector is used with the generic,
+                // you can pass in a string instead of an expression to select out a 'EdgeDBObject' type.
+                ReferencedFriends = ctx.BackLink(x => x.BestFriends, () => new MultiLinkPerson
+                {
+                    Name = ctx.Include<string>(),
+                    Email = ctx.Include<string>(),
+                })
+            }).Build().Prettify();
 
             // Inserting a new type
             var person = new LinkPerson
