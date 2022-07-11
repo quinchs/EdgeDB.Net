@@ -60,6 +60,25 @@ namespace EdgeDB.Translators.Expressions
                         {
                             return TranslateExpression(expression.Arguments[0], context.Enter(x => x.StringWithoutQuotes = true));
                         }
+                    case nameof(QueryContext.BackLink):
+                        {
+                            var isRawPropertyName = expression.Arguments[0].Type == typeof(string);
+                            var hasShape = !isRawPropertyName && expression.Arguments.Count > 1;
+                            var property = TranslateExpression(expression.Arguments[0],
+                                isRawPropertyName
+                                    ? context.Enter(x => x.StringWithoutQuotes = true) 
+                                    : context.Enter(x => x.IncludeSelfReference = false));
+                            
+                            var backlink = $".<{property}";
+
+                            if (!isRawPropertyName)
+                                backlink += $"[is {expression.Method.GetGenericArguments()[0].GetEdgeDBTypeName()}]";
+
+                            if (hasShape)
+                                backlink += $"{{{TranslateExpression(expression.Arguments[1], context)}}}";
+
+                            return backlink;
+                        }
                     default:
                         throw new NotImplementedException($"{expression.Method.Name} does not have an implementation. This is a bug, please file a github issue with your query to reproduce this exception.");
 

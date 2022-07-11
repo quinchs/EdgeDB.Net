@@ -80,10 +80,10 @@ namespace EdgeDB
             }
         }
 
-        private static object? ConvertCollection(Type targetType, Type valueType, object value)
+        internal static object? ConvertCollection(Type targetType, Type valueType, object value)
         {
             List<object?> converted = new();
-            var strongInnerType = targetType.GenericTypeArguments.FirstOrDefault();
+            var strongInnerType = targetType.IsArray ? targetType.GetElementType()! : targetType.GenericTypeArguments.FirstOrDefault();
 
             foreach (var val in (IEnumerable)value)
             {
@@ -96,8 +96,15 @@ namespace EdgeDB
 
             }
 
-            var arr = Array.CreateInstance(strongInnerType ?? valueType.GenericTypeArguments[0], converted.Count);
-            Array.Copy(converted.ToArray(), arr, converted.Count);
+            Array arr;
+
+            if (converted.Any())
+            {
+                arr = Array.CreateInstance(strongInnerType ?? valueType.GenericTypeArguments[0], converted.Count);
+                Array.Copy(converted.ToArray(), arr, converted.Count);
+            }
+            else
+                arr = (Array)typeof(Array).GetMethod("Empty")!.MakeGenericMethod(strongInnerType!).Invoke(null, null)!;
 
             switch (targetType)
             {

@@ -345,6 +345,10 @@ namespace EdgeDB.Serializer
                         {
                             ctorParams[i] = Enum.Parse(prop.PropertyType, str);
                         }
+                        else if (value is object?[] objArray && prop.PropertyType.IsAssignableTo(typeof(IEnumerable)))
+                        {
+                            ctorParams[i] = ObjectBuilder.ConvertCollection(prop.PropertyType, valueType, value);
+                        }
                         else
                             throw new InvalidOperationException($"Cannot assign property {prop.Name} with type {valueType}");
                     }

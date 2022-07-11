@@ -21,18 +21,21 @@ namespace EdgeDB.Translators.Expressions
                 return $"<{type}>${varName}";
             }
 
-            return ParseMemberExpression(expression, expression.Expression is not ParameterExpression);
+            return ParseMemberExpression(expression, expression.Expression is not ParameterExpression, context.IncludeSelfReference);
         }
 
-        private static string ParseMemberExpression(MemberExpression expression, bool includeParameter = true)
+        private static string ParseMemberExpression(MemberExpression expression, bool includeParameter = true, bool includeSelfReference = true)
         {
-            List<string?> tree = new();
-
-            tree.Add(expression.Member.GetEdgeDBPropertyName());
+            List<string?> tree = new()
+            {
+                expression.Member.GetEdgeDBPropertyName()
+            };
+            
             if (expression.Expression is MemberExpression innerExp)
                 tree.Add(ParseMemberExpression(innerExp));
             if (expression.Expression is ParameterExpression param)
-                tree.Add(includeParameter ? param.Name : string.Empty);
+                if(includeSelfReference)
+                    tree.Add(includeParameter ? param.Name : string.Empty);
 
             tree.Reverse();
             return string.Join('.', tree);

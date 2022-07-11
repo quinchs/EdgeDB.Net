@@ -38,14 +38,15 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
-            var test = QueryBuilder.Update<MultiLinkPerson>(old => new MultiLinkPerson
+            var result = await new QueryBuilder<MultiLinkPerson>().Select(ctx => new
             {
-                BestFriends = EdgeQL.AddLink(QueryBuilder.Insert(new MultiLinkPerson
+                Name = ctx.Include<string>(),
+                Email = ctx.Include<string>(),
+                BestFriendsBacklink = ctx.BackLink(x => x.BestFriends, () => new MultiLinkPerson
                 {
-                    Email = "test5@mail.com",
-                    Name = "test5"
-                }, false))
-            }).Build();
+                    Name = ctx.Include<string>()
+                })
+            }).ExecuteAsync(client);
 
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();

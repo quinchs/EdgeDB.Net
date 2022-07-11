@@ -94,5 +94,22 @@ namespace EdgeDB
         public TCollection IncludeMultiLink<TType, TCollection>(Expression<Func<TType>> shape)
             where TCollection : IEnumerable<TType>
             => default!;
+
+        public EdgeDBObject[] BackLink(string property)
+            => default!;
+
+        public TCollection BackLink<TCollection>(string property)
+            where TCollection : IEnumerable<EdgeDBObject>
+            => default!;
+
+        public TType[] BackLink<TType>(Expression<Func<TType, object?>> propertySelector)
+            => default!;
+
+        public TType[] BackLink<TType>(Expression<Func<TType, object?>> propertySelector, Expression<Func<TType>> shape)
+            => default!;
+
+        public TCollection BackLink<TType, TCollection>(Expression<Func<TType, object?>> propertySelector, Expression<Func<TType>> shape)
+            where TCollection : IEnumerable<TType>
+            => default!;
     }
 }

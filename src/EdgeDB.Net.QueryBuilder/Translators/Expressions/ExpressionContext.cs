@@ -19,9 +19,8 @@ namespace EdgeDB
         public bool StringWithoutQuotes { get; set; }
         public Type? LocalScope { get; set; }
         public bool IsShape { get; set; }
-        
         public bool HasInitializationOperator { get; set; }
-
+        public bool IncludeSelfReference { get; set; } = true;
 
         public ExpressionContext(NodeContext context, LambdaExpression rootExpression, 
             IDictionary<string, object?> queryArguments, List<QueryGlobal> globals)
