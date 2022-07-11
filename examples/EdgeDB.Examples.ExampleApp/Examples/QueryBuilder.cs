@@ -80,6 +80,15 @@ namespace EdgeDB.ExampleApp.Examples
                 )
             ).Build().Prettify();
 
+            // selecting 'free objects'
+            query = QueryBuilder.Select(ctx => new
+            {
+                MyString = "This is a string",
+                MyNumber = 42,
+                SeveralNumbers = new long[] { 1, 2, 3 },
+                People = ctx.SubQuery(QueryBuilder.Select<MultiLinkPerson>())
+            }).Build().Prettify();
+
             // Backlinks
             query = new QueryBuilder<MultiLinkPerson>().Select(ctx => new
             {

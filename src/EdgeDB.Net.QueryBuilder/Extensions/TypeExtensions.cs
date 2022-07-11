@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,6 +11,13 @@ namespace EdgeDB
 {
     internal static class TypeExtensions
     {
+        public static bool IsAnonymousType(this Type type)
+        {
+            return
+                type.GetCustomAttributes(typeof(CompilerGeneratedAttribute), false).Length > 0 &&
+                type.FullName!.Contains("AnonymousType");
+        }
+
         public static string GetEdgeDBTypeName(this Type type)
         {
             var attr = type.GetCustomAttribute<EdgeDBTypeAttribute>();

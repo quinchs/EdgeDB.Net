@@ -11,7 +11,9 @@ namespace EdgeDB.QueryNodes
     {
         public LambdaExpression? Shape { get; init; }
         public string? SelectName { get; set; }
-        public bool SelectExpressional { get; set; }
+        public bool SelectExpressional { get; init; }
+        public bool IsFreeObject { get; init; }
+
         public SelectContext(Type currentType) : base(currentType)
         {
         }

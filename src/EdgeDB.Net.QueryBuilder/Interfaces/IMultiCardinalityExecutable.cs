@@ -10,7 +10,7 @@ namespace EdgeDB.Interfaces
     ///     Represents an executable query with one or more returning objects.
     /// </summary>
     /// <typeparam name="TType">The object the query will return.</typeparam>
-    public interface IMultiCardinalityExecutable<TType> : IQueryBuilder, IQuery<TType>
+    public interface IMultiCardinalityExecutable<TType> : IQueryBuilder, IMultiCardinalityQuery<TType>
     {
         /// <summary>
         ///     Executes the current query.

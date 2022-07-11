@@ -1,4 +1,5 @@
-﻿using EdgeDB.Interfaces.Queries;
+﻿using EdgeDB.Interfaces;
+using EdgeDB.Interfaces.Queries;
 using EdgeDB.Operators;
 using System;
 using System.Collections.Generic;
@@ -109,6 +110,16 @@ namespace EdgeDB
             => default!;
 
         public TCollection BackLink<TType, TCollection>(Expression<Func<TType, object?>> propertySelector, Expression<Func<TType>> shape)
+            where TCollection : IEnumerable<TType>
+            => default!;
+
+        public TType SubQuery<TType>(ISingleCardinalityQuery<TType> query)
+            => default!;
+
+        public TType[] SubQuery<TType>(IMultiCardinalityQuery<TType> query)
+            => default!;
+
+        public TCollection SubQuery<TType, TCollection>(IMultiCardinalityQuery<TType> query)
             where TCollection : IEnumerable<TType>
             => default!;
     }

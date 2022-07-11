@@ -47,7 +47,7 @@ namespace EdgeDB.Translators.Expressions
                     value = TranslateExpression(expression.Arguments[i], context.Enter(x => x.LocalScope = expression.Type));
                 }
                 
-                shape[i] = $"{edgedbName}{(isSetter ? " :=" : "")} {value}";
+                shape[i] = $"{edgedbName}{(isSetter || context.IsFreeObject ? " :=" : "")} {value}";
             }
             
             return string.Join(", ", shape);

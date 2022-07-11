@@ -48,7 +48,7 @@ namespace EdgeDB.QueryNodes
                 return GetDefaultShape();
             }
 
-            if (Context.SelectExpressional)
+            if (Context.SelectExpressional && !Context.IsFreeObject)
             {
                 return ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context, Builder.QueryGlobals);
             }
@@ -71,7 +71,8 @@ namespace EdgeDB.QueryNodes
         public override void Visit()
         {
             var shape = GetShape();
-            if (Context.SelectExpressional)
+            
+            if (Context.SelectExpressional || Context.IsFreeObject)
                 Query.Append($"select {shape}");
             else 
                 Query.Append($"select {Context.SelectName ?? Context.CurrentType.GetEdgeDBTypeName()} {shape}");

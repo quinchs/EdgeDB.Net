@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EdgeDB.QueryNodes;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -11,6 +12,8 @@ namespace EdgeDB
 {
     internal class ExpressionContext
     {
+        public List<Expression> ExpressionTree { get; set; } = new();
+
         public NodeContext NodeContext { get; }
         public LambdaExpression RootExpression { get; }
         public Dictionary<string, Type> Parameters { get; }
@@ -21,10 +24,13 @@ namespace EdgeDB
         public bool IsShape { get; set; }
         public bool HasInitializationOperator { get; set; }
         public bool IncludeSelfReference { get; set; } = true;
+        public bool IsFreeObject
+            => NodeContext is SelectContext selectContext && selectContext.IsFreeObject;
 
         public ExpressionContext(NodeContext context, LambdaExpression rootExpression, 
             IDictionary<string, object?> queryArguments, List<QueryGlobal> globals)
         {
+            ExpressionTree.Add(rootExpression);
             RootExpression = rootExpression;
             _queryObjects = queryArguments;
             NodeContext = context;
@@ -73,6 +79,7 @@ namespace EdgeDB
         {
             var exp = (ExpressionContext)MemberwiseClone();
             func(exp);
+            exp.ExpressionTree = ExpressionTree.ToList(); // creates a new instance as we dont want to copy ref of this contexts tree.
             return exp;
         }
     }

@@ -79,6 +79,22 @@ namespace EdgeDB.Translators.Expressions
 
                             return backlink;
                         }
+                    case nameof(QueryContext.SubQuery):
+                        {
+                            var builder = (IQueryBuilder)Expression.Lambda(expression.Arguments[0]).Compile().DynamicInvoke()!;
+
+                            var result = builder.BuildWithGlobals();
+
+                            if(result.Parameters is not null)
+                                foreach (var parameter in result.Parameters)
+                                    context.SetVariable(parameter.Key, parameter.Value);
+
+                            if (result.Globals is not null)
+                                foreach (var global in result.Globals)
+                                    context.SetGlobal(global.Name, global.Value, global.Reference);
+
+                            return $"({result.Query})";
+                        }
                     default:
                         throw new NotImplementedException($"{expression.Method.Name} does not have an implementation. This is a bug, please file a github issue with your query to reproduce this exception.");
 

@@ -67,7 +67,10 @@ namespace EdgeDB
                 expType = expType.BaseType!;  
 
             if (_translators.TryGetValue(expType, out var translator))
-                return translator.Translate(expression, context)!;
+            {
+                
+                return translator.Translate(expression, context.Enter(x => x.ExpressionTree.Add(expression)))!;
+            }
 
             throw new NotSupportedException($"Failed to find translator for expression type: {expType.Name}.{expression.NodeType}");
         }

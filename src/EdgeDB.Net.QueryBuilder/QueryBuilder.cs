@@ -197,7 +197,12 @@ namespace EdgeDB
 
         public ISelectQuery<TResult> Select<TResult>(Expression<Func<TResult>> selectFunc)
         {
-            AddNode<SelectNode>(new SelectContext(typeof(TResult)) { SelectExpressional = true, Shape = selectFunc }, true);
+            AddNode<SelectNode>(new SelectContext(typeof(TResult)) 
+            { 
+                SelectExpressional = true, 
+                Shape = selectFunc,
+                IsFreeObject = typeof(TResult).IsAnonymousType()
+            });
             return EnterNewType<TResult>();
         }
 
@@ -206,7 +211,8 @@ namespace EdgeDB
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType))
             {
-                Shape = shape
+                Shape = shape,
+                IsFreeObject = typeof(TType).IsAnonymousType(),
             });
             return this;
         }
