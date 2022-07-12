@@ -64,6 +64,8 @@ namespace EdgeDB
                         return new ServerHandshake(ref reader);
                     case ServerMessageType.ServerKeyData:
                         return new ServerKeyData(ref reader);
+                    case ServerMessageType.StateDataDescription:
+                        return new StateDataDescription(ref reader);
                     default:
                         // skip the packet length
                         reader.Skip(length);
@@ -161,7 +163,13 @@ namespace EdgeDB
                                 codecs.Add(codec);
                             }
                             break;
-
+                        case InputShapeDescriptor inputShape:
+                            {
+                                var codecArguments = inputShape.Shapes.Select(x => codecs[x.TypePos]);
+                                codec = new Codecs.SparceObject(codecArguments.ToArray(), inputShape.Shapes);
+                                codecs.Add(codec);
+                            }
+                            break;
                         default:
                             break;
                     }

@@ -57,6 +57,9 @@ namespace EdgeDB.Binary.Packets
 
         public string? Command { get; set; }
 
+        public Guid StateTypeDescriptorId { get; set; }
+        public byte[]? StateData { get; set; }
+
         protected override void BuildPacket(PacketWriter writer, EdgeDBBinaryClient client)
         {
             if (Command is null)
@@ -114,6 +117,12 @@ namespace EdgeDB.Binary.Packets
             writer.Write((byte)ExpectedCardinality);
             writer.Write(Name ?? "");
             writer.Write(Command);
+            writer.Write(StateTypeDescriptorId);
+
+            if (StateData is not null)
+                writer.WriteArray(StateData);
+            else
+                writer.Write(0u);
         }
     }
 }

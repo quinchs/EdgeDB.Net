@@ -118,7 +118,6 @@ namespace EdgeDB
             MessageTimeout = TimeSpan.FromMilliseconds(config.MessageTimeout);
             ConnectionTimeout = TimeSpan.FromMilliseconds(config.ConnectionTimeout);
             Duplexer = new ClientPacketDuplexer(this);
-
             Duplexer.OnDisconnected += HandleDuplexerDisconnectAsync;
         }
 
@@ -390,24 +389,23 @@ namespace EdgeDB
             switch (payload)
             {
                 case ErrorResponse err:
-                    {
-                        Logger.ErrorResponseReceived(err.Severity, err.Message);
+                    Logger.ErrorResponseReceived(err.Severity, err.Message);
 
-                        if (!_readyCancelTokenSource.IsCancellationRequested)
-                            _readyCancelTokenSource.Cancel();
-                    }
+                    if (!_readyCancelTokenSource.IsCancellationRequested)
+                        _readyCancelTokenSource.Cancel();
                     break;
                 case AuthenticationStatus authStatus:
                     if (authStatus.AuthStatus == AuthStatus.AuthenticationRequiredSASLMessage)
                         _ = Task.Run(async () => await StartSASLAuthenticationAsync(authStatus).ConfigureAwait(false));
                     else if (authStatus.AuthStatus == AuthStatus.AuthenticationOK)
                         _authCompleteSource.TrySetResult();
-
                     break;
                 case ServerKeyData keyData:
-                    {
-                        ServerKey = keyData.KeyBuffer;
-                    }
+                    ServerKey = keyData.KeyBuffer;
+                    break;
+                case StateDataDescription stateDescriptor:
+                    // build the codec so its cached.
+                    PacketSerializer.BuildCodec(stateDescriptor.TypeDescriptorId, stateDescriptor.TypeDescriptorBuffer);
                     break;
                 case ParameterStatus parameterStatus:
                     ParseServerSettings(parameterStatus);
