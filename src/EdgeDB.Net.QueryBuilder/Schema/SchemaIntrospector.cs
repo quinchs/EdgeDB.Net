@@ -8,15 +8,33 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Schema
 {   
+    /// <summary>
+    ///     Represents a class responsible for preforming and caching schema introspection data.
+    /// </summary>
     internal class SchemaIntrospector
     {
+        /// <summary>
+        ///     The cache of schema info key'd by the client.
+        /// </summary>
         private static readonly ConcurrentDictionary<IEdgeDBQueryable, SchemaInfo> _schemas;
 
+        /// <summary>
+        ///     Initializes the schema info collection.
+        /// </summary>
         static SchemaIntrospector()
         {
             _schemas = new ConcurrentDictionary<IEdgeDBQueryable, SchemaInfo>();
         }
 
+        /// <summary>
+        ///     Gets or creates schema introspection info.
+        /// </summary>
+        /// <param name="edgedb">The client to preform introspection with if the cache doesn't have it.</param>
+        /// <param name="token">A cancellation token used to cancel the introspection query.</param>
+        /// <returns>
+        ///     A ValueTask representing the (a)sync introspection operation. The result of the 
+        ///     task is the introspection info.
+        /// </returns>
         public static ValueTask<SchemaInfo> GetOrCreateSchemaIntrospectionAsync(IEdgeDBQueryable edgedb, CancellationToken token = default)
         {
             if (_schemas.TryGetValue(edgedb, out var info))
@@ -24,8 +42,18 @@ namespace EdgeDB.Schema
             return new ValueTask<SchemaInfo>(IntrospectSchemaAsync(edgedb, token));
         }
 
+        /// <summary>
+        ///     Preforms an introspection and adds its result to the <see cref="_schemas"/> collection.
+        /// </summary>
+        /// <param name="edgedb">The client to preform introspection with.</param>
+        /// <param name="token">A cancellation token used to cancel the introspection query.</param>
+        /// <returns>
+        ///     A ValueTask representing the (a)sync introspection operation. The result of the 
+        ///     task is the introspection info.
+        /// </returns>
         private static async Task<SchemaInfo> IntrospectSchemaAsync(IEdgeDBQueryable edgedb, CancellationToken token)
         {
+            // select out all object types and filter where they're not built-in
             var result = await QueryBuilder.Select<ObjectType>(ctx => new ObjectType
             {
                 Id = ctx.Include<Guid>(),
@@ -47,6 +75,7 @@ namespace EdgeDB.Schema
                 })
             }).Filter((x, ctx) => !ctx.UnsafeLocal<bool>("builtin")).ExecuteAsync(edgedb, token);
             
+            // add to our cache
             return _schemas[edgedb] = new SchemaInfo(result);
         }
     }

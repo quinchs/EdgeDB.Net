@@ -73,6 +73,14 @@ namespace EdgeDB
         public object? UnsafeLocal(string name)
             => default!;
 
+        /// <summary>
+        ///     Adds raw edgeql to the current query.
+        /// </summary>
+        /// <typeparam name="TType">The return type of the raw edgeql.</typeparam>
+        /// <param name="query">The edgeql to add.</param>
+        /// <returns>
+        ///     A mock reference of the returning type of the raw edgeql.
+        /// </returns>
         public TType Raw<TType>(string query)
             => default!;
 
@@ -86,39 +94,131 @@ namespace EdgeDB
         public TType Include<TType>()
             => default!;
 
+        /// <summary>
+        ///     Includes a link property with a given shape.
+        /// </summary>
+        /// <typeparam name="TType">The type of the link property.</typeparam>
+        /// <param name="shape">The shape of the link property.</param>
+        /// <returns>
+        ///     A mock reference to the property that this include statement is being assigned to.
+        /// </returns>
         public TType IncludeLink<TType>(Expression<Func<TType>> shape)
             => default!;
 
+        /// <summary>
+        ///     Includes a multi link property with a given shape.
+        /// </summary>
+        /// <typeparam name="TType">The type of the multi link property.</typeparam>
+        /// <param name="shape">The shape of the multi link property.</param>
+        /// <returns>
+        ///     A mock reference to the property that this include statement is being assigned to.
+        /// </returns>
         public TType[] IncludeMultiLink<TType>(Expression<Func<TType>> shape)
             => default!;
 
+        /// <summary>
+        ///     Includes a multi link property with a given shape.
+        /// </summary>
+        /// <typeparam name="TType">The type of the multi link property.</typeparam>
+        /// <typeparam name="TCollection">A collection that should be returned instead of an array</typeparam>
+        /// <param name="shape">The shape of the multi link property.</param>
+        /// <returns>
+        ///     A mock reference to the property that this include statement is being assigned to.
+        /// </returns>
         public TCollection IncludeMultiLink<TType, TCollection>(Expression<Func<TType>> shape)
             where TCollection : IEnumerable<TType>
             => default!;
 
+        /// <summary>
+        ///     Adds a backlink to the current query.
+        /// </summary>
+        /// <param name="property">The property on which to backlink.</param>
+        /// <returns>
+        ///     A mock array of <see cref="EdgeDBObject"/> containing just the objects id.
+        ///     To return a specific type use <see cref="BackLink{TType}(Expression{Func{TType, object?}})"/>.
+        /// </returns>
         public EdgeDBObject[] BackLink(string property)
             => default!;
 
+        /// <summary>
+        ///     Adds a backlink to the current query.
+        /// </summary>
+        /// <typeparam name="TCollection">The collection type to return.</typeparam>
+        /// <param name="property">The property on which to backlink.</param>
+        /// <returns>
+        ///     A mock collection of <see cref="EdgeDBObject"/> containing just the objects id.
+        ///     To return a specific type use <see cref="BackLink{TType}(Expression{Func{TType, object?}})"/>.
+        /// </returns>
         public TCollection BackLink<TCollection>(string property)
             where TCollection : IEnumerable<EdgeDBObject>
             => default!;
 
+        /// <summary>
+        ///     Adds a backlink with the given type to the current query.
+        /// </summary>
+        /// <typeparam name="TType">The type of which to backlink with.</typeparam>
+        /// <param name="propertySelector">The property selector for the backlink.</param>
+        /// <returns>
+        ///     A mock array of <typeparamref name="TType"/>.
+        /// </returns>
         public TType[] BackLink<TType>(Expression<Func<TType, object?>> propertySelector)
             => default!;
 
+        /// <summary>
+        ///     Adds a backlink with the given type and shape to the current query.
+        /// </summary>
+        /// <typeparam name="TType">The type of which to backlink with.</typeparam>
+        /// <param name="propertySelector">The property selector for the backlink.</param>
+        /// <param name="shape">The shape of the backlink.</param>
+        /// <returns>
+        ///     A mock array of <typeparamref name="TType"/>.
+        /// </returns>
         public TType[] BackLink<TType>(Expression<Func<TType, object?>> propertySelector, Expression<Func<TType>> shape)
             => default!;
 
+        /// <summary>
+        ///     Adds a backlink with the given type and shape to the current query.
+        /// </summary>
+        /// <typeparam name="TType">The type of which to backlink with.</typeparam>
+        /// <typeparam name="TCollection">The collection type to return.</typeparam>
+        /// <param name="propertySelector">The property selector for the backlink.</param>
+        /// <param name="shape">The shape of the backlink.</param>
+        /// <returns>
+        ///     A mock collection of <typeparamref name="TType"/>.
+        /// </returns>
         public TCollection BackLink<TType, TCollection>(Expression<Func<TType, object?>> propertySelector, Expression<Func<TType>> shape)
             where TCollection : IEnumerable<TType>
             => default!;
 
+        /// <summary>
+        ///     Adds a sub query to the current query.
+        /// </summary>
+        /// <typeparam name="TType">The returning type of the query.</typeparam>
+        /// <param name="query">The single-cardinality query to add as a sub query.</param>
+        /// <returns>
+        ///     A single mock instance of <typeparamref name="TType"/>.
+        /// </returns>
         public TType SubQuery<TType>(ISingleCardinalityQuery<TType> query)
             => default!;
 
+        /// <summary>
+        ///     Adds a sub query to the current query.
+        /// </summary>
+        /// <typeparam name="TType">The returning type of the query.</typeparam>
+        /// <param name="query">The multi-cardinality query to add as a sub query.</param>
+        /// <returns>
+        ///     A mock array of <typeparamref name="TType"/>.
+        /// </returns>
         public TType[] SubQuery<TType>(IMultiCardinalityQuery<TType> query)
             => default!;
 
+        /// <summary>
+        ///     Adds a sub query to the current query.
+        /// </summary>
+        /// <typeparam name="TType">The returning type of the query.</typeparam>
+        /// <typeparam name="TCollection">The collection type to return.</typeparam>
+        /// <param name="query">The multi-cardinality query to add as a sub query.</param>
+        /// <returns>A mock collection of <typeparamref name="TType"/>.</returns>
         public TCollection SubQuery<TType, TCollection>(IMultiCardinalityQuery<TType> query)
             where TCollection : IEnumerable<TType>
             => default!;

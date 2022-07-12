@@ -10,7 +10,5 @@ namespace EdgeDB
     ///     Represents a generic query.
     /// </summary>
     /// <typeparam name="TType">The inner 'working' type of the query.</typeparam>
-    public interface IQuery<TType> : IQueryBuilder
-    {
-    }
+    public interface IQuery<TType> : IQueryBuilder { }
 }

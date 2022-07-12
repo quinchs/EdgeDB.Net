@@ -7,10 +7,15 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Translators.Expressions
 {
+    /// <summary>
+    ///     Represents a translator for translating an expression with a binary operator.
+    /// </summary>
     internal class BinaryExpressionTranslator : ExpressionTranslator<BinaryExpression>
     {
+        /// <inheritdoc/>
         public override string? Translate(BinaryExpression expression, ExpressionContext context)
         {
+            // translate the left and right side of the binary operation
             var left = TranslateExpression(expression.Left, context);
             var right = TranslateExpression(expression.Right, context);
 
@@ -22,9 +27,11 @@ namespace EdgeDB.Translators.Expressions
                 return $"{(expression.NodeType is ExpressionType.Equal ? "not exists" : "exists")} {(right == "{}" ? left : right)}";
             }
 
+            // Try to get a IEdgeQLOperator for the given binary operator
             if (!TryGetExpressionOperator(expression.NodeType, out var op))
                 throw new NotSupportedException($"Failed to find operator for node type {expression.NodeType}");
 
+            // build the operator
             return op.Build(left, right);
         }
     }

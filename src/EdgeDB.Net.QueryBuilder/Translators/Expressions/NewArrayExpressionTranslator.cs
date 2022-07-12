@@ -7,10 +7,16 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Translators.Expressions
 {
+    /// <summary>
+    ///     Represents a translator for translating an expression creating a new array and 
+    ///     possibly initializing the elements of the new array.
+    /// </summary>
     internal class NewArrayExpressionTranslator : ExpressionTranslator<NewArrayExpression>
     {
+        /// <inheritdoc/>
         public override string? Translate(NewArrayExpression expression, ExpressionContext context)
         {
+            // return out a edgeql set with each element in the dotnet array translated
             return $"{{ {string.Join(", ", expression.Expressions.Select(x => TranslateExpression(x, context)))} }}";
         }
     }

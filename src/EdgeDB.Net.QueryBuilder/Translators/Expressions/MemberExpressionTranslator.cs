@@ -8,11 +8,17 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Translators.Expressions
 {
+    /// <summary>
+    ///     Represents a translator for translating an expression accessing a field or property.
+    /// </summary>
     internal class MemberExpressionTranslator : ExpressionTranslator<MemberExpression>
     {
+        /// <inheritdoc/>
         public override string? Translate(MemberExpression expression, ExpressionContext context)
         {
-            if(expression.Expression is ConstantExpression constant)
+            // if the inner expression is a constant value we can get, assume
+            // were in a set-like context and add it as a variable.
+            if (expression.Expression is ConstantExpression constant)
             {
                 object? value = expression.Member.GetMemberValue(constant.Value);
 
@@ -20,10 +26,18 @@ namespace EdgeDB.Translators.Expressions
                 var type = PacketSerializer.GetEdgeQLType(expression.Type);
                 return $"<{type}>${varName}";
             }
-
+            
+            // assume were in a access-like context and reference it in edgeql.
             return ParseMemberExpression(expression, expression.Expression is not ParameterExpression, context.IncludeSelfReference);
         }
 
+        /// <summary>
+        ///     Parses a given member expression into a member access list.
+        /// </summary>
+        /// <param name="expression">The expression to parse.</param>
+        /// <param name="includeParameter">Whether or not to include the referenced parameter name.</param>
+        /// <param name="includeSelfReference">Whether or not to include a self reference, ex: '.'.</param>
+        /// <returns></returns>
         private static string ParseMemberExpression(MemberExpression expression, bool includeParameter = true, bool includeSelfReference = true)
         {
             List<string?> tree = new()

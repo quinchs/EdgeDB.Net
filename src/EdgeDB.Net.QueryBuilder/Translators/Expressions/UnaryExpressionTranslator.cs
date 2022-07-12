@@ -7,14 +7,22 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Translators.Expressions
 {
+    /// <summary>
+    ///     Represents a translator for translating an expression with a unary operator.
+    /// </summary>
     internal class UnaryExpressionTranslator : ExpressionTranslator<UnaryExpression>
     {
+        /// <inheritdoc/>
         public override string? Translate(UnaryExpression expression, ExpressionContext context)
         {
             switch (expression.NodeType)
             {
+                // quote expressions are literal funcs (im pretty sure), so we can just
+                // directly translate them and return the result.
                 case ExpressionType.Quote when expression.Operand is LambdaExpression lambda:
                     return TranslateExpression(lambda.Body, context.Enter(x => x.StringWithoutQuotes = false));
+
+                // convert is a type change, so we translate the dotnet form '(type)value' to '<type>value'
                 case ExpressionType.Convert:
                     {
                         var value = TranslateExpression(expression.Operand, context);
@@ -35,6 +43,8 @@ namespace EdgeDB.Translators.Expressions
                         return $"<{type}>{value}";
                     }
 
+                // default case attempts to get an IEdgeQLOperator for the given
+                // node type, and uses that to translate the expression.
                 default:
                     if (!TryGetExpressionOperator(expression.NodeType, out var op))
                         throw new NotSupportedException($"Failed to find operator for node type {expression.NodeType}");

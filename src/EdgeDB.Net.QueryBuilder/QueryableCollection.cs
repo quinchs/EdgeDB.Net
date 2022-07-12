@@ -12,6 +12,10 @@ using System.Threading.Tasks;
 
 namespace EdgeDB
 {
+    /// <summary>
+    ///     A wrapper for the <see cref="QueryBuilder{TType}"/> which expose basic CRUD methods.
+    /// </summary>
+    /// <typeparam name="TType"></typeparam>
     public sealed class QueryableCollection<TType>
     {
         /// <summary>
@@ -20,8 +24,15 @@ namespace EdgeDB
         public QueryBuilder<TType> QueryBuilder
             => new();
 
+        /// <summary>
+        ///     The client used for introspection & execution.
+        /// </summary>
         private readonly IEdgeDBQueryable _edgedb;
 
+        /// <summary>
+        ///     Constructs a new <see cref="QueryableCollection{TType}"/>.
+        /// </summary>
+        /// <param name="edgedb">The client to introspect & execute with.</param>
         internal QueryableCollection(IEdgeDBQueryable edgedb)
         {
             _edgedb = edgedb;

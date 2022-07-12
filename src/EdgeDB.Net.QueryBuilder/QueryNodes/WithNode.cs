@@ -6,25 +6,29 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.QueryNodes
 {
+    /// <summary>
+    ///     Represents a 'WITH' node.
+    /// </summary>
     internal class WithNode : QueryNode<WithContext>
     {
-        public bool HasVisited { get; private set; }
-
+        /// <inheritdoc/>
         public WithNode(NodeBuilder builder) : base(builder) { }
 
+        /// <inheritdoc/>
         public override void Visit()
         {
-            HasVisited = true;
-            
+            // if no values are provided we can safely stop here.
             if (Context.Values is null || !Context.Values.Any())
                 return;
 
             List<string> values = new();
 
+            // iterate over every global defined in our context
             foreach(var global in Context.Values)
             {
                 var value = global.Value;
 
+                // if its a query builder, build it and add it as a sub-query.
                 if (value is IQueryBuilder queryBuilder)
                 {
                     var query = queryBuilder.Build();
@@ -39,6 +43,7 @@ namespace EdgeDB.QueryNodes
                             SetGlobal(queryGlobal.Name, queryGlobal.Value, null);
                 }
 
+                // if its a sub query that requires introspection, build it and add it.
                 if(value is SubQuery subQuery && subQuery.RequiresIntrospection)
                 {
                     if (subQuery.RequiresIntrospection && SchemaInfo is null)
@@ -46,9 +51,11 @@ namespace EdgeDB.QueryNodes
                     value = subQuery.Build(SchemaInfo!);
                 }
 
+                // parse the object and add it to the values.
                 values.Add($"{global.Name} := {QueryUtils.ParseObject(value)}");
             }
 
+            // join the values seperated by commas
             Query.Append($"with {string.Join(", ", values)}");
         }
     }
