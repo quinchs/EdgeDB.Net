@@ -23,6 +23,11 @@ namespace EdgeDB
         string Name { get; }
 
         /// <summary>
+        ///     Gets the variable name representing this json value.
+        /// </summary>
+        string VariableName { get; }
+
+        /// <summary>
         ///     Gets the inner type of the json value.
         /// </summary>
         Type InnerType { get; }
@@ -66,6 +71,8 @@ namespace EdgeDB
         internal bool IsObjectArray
             => _array.All(x => x is JObject);
 
+        internal string VariableName { get; }
+
         /// <summary>
         ///     The root <see cref="JArray"/> containing all the json objects.
         /// </summary>
@@ -76,9 +83,10 @@ namespace EdgeDB
         /// </summary>
         /// <param name="name">The name of the variable.</param>
         /// <param name="array">The <see cref="JArray"/> containing all the json objects.</param>
-        internal JsonVariable(string name, JArray array)
+        internal JsonVariable(string name, string varName, JArray array)
         {
             _array = array;
+            VariableName = varName;
             Name = name;
         }
 
@@ -133,5 +141,6 @@ namespace EdgeDB
         Type IJsonVariable.InnerType => typeof(T);
         IEnumerable<JObject> IJsonVariable.GetObjectsAtDepth(int targetDepth) => GetObjectsAtDepth(targetDepth);
         int IJsonVariable.Depth => CalculateDepth();
+        string IJsonVariable.VariableName => VariableName;
     }
 }

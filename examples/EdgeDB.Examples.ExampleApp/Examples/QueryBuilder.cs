@@ -78,9 +78,9 @@ namespace EdgeDB.ExampleApp.Examples
             };
 
             var test = (await new QueryBuilder<LinkPerson>()
-               .For(set, x =>
+               . For(set, x =>
                    QueryBuilder.Insert(x, false)
-               ).BuildAsync(client)).Prettify();
+               ).BuildAsync(client));
 
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();

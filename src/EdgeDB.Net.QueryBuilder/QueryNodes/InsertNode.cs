@@ -1,4 +1,5 @@
-﻿using EdgeDB.Serializer;
+﻿using EdgeDB.DataTypes;
+using EdgeDB.Serializer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -186,7 +187,7 @@ namespace EdgeDB.QueryNodes
                     // define the insert shape
                     var shape = allProps.Select(x =>
                     {
-                        var propName = x.GetEdgeDBPropertyName();
+                        var edgedbName = x.GetEdgeDBPropertyName();
                         
                         // if its a link, add a ternary statement for pulling the value out of a sub-map
                         if (QueryUtils.IsLink(x.PropertyType, out _, out _))
@@ -195,16 +196,16 @@ namespace EdgeDB.QueryNodes
                             // are no sub types within the current context, we can safely set the link to 
                             // an empty set
                             if (isLast)
-                                return $"{propName} := {{}}";
+                                return $"{edgedbName} := {{}}";
 
-                            return $"{propName} := {mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{propName}', '{mappingName}_depth_index')] if json_typeof(json_get({iterationName}, '{propName}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
+                            return $"{edgedbName} := {mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({iterationName}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
                         }
 
                         // if its a scalar type, use json_get to pull the value and cast it to our property
                         // type
                         var edgeqlType = PacketSerializer.GetEdgeQLType(x.PropertyType);
 
-                        return $"{propName} := <{edgeqlType}>json_get({iterationName}, '{propName}')";
+                        return $"{edgedbName} := <{edgeqlType}>json_get({iterationName}, '{x.Name}')";
 
                     });
 
@@ -227,26 +228,29 @@ namespace EdgeDB.QueryNodes
                 // serialize this depths values and set the variable & global for the sub-query
                 var iterationJson = JsonConvert.SerializeObject(map.Select(x => x.Node));
 
-                SetVariable(variableName, iterationJson);
+                SetVariable(variableName, new Json(iterationJson));
                 SetGlobal($"{mappingName}_d{i}", query, null);
             }
+
+            // replace the json variables content with the root depth map
+            SetVariable(jsonValue.VariableName, new Json(JsonConvert.SerializeObject(depthMap[0].Select(x => x.Node))));
 
             // create the base insert shape
             var shape = jsonValue.InnerType.GetEdgeDBTargetProperties().Select(x =>
             {
-                var propName = x.GetEdgeDBPropertyName();
+                var edgedbName = x.GetEdgeDBPropertyName();
 
                 // if its a link, add a ternary statement for pulling the value out of a sub-map
                 if (QueryUtils.IsLink(x.PropertyType, out _, out _))
                 {
-                    return $"{propName} := {mappingName}_d1[<int64>json_get({jsonValue.Name}, '{propName}', '{mappingName}_depth_index')] if json_typeof(json_get({jsonValue.Name}, '{propName}')) != 'null' else <{jsonValue.InnerType.GetEdgeDBTypeName()}>{{}}";
+                    return $"{edgedbName} := {mappingName}_d1[<int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({jsonValue.Name}, '{x.Name}')) != 'null' else <{jsonValue.InnerType.GetEdgeDBTypeName()}>{{}}";
                 }
 
                 // if its a scalar type, use json_get to pull the value and cast it to our property
                 // type
                 var edgeqlType = PacketSerializer.GetEdgeQLType(x.PropertyType);
 
-                return $"{propName} := <{edgeqlType}>json_get({jsonValue.Name}, '{propName}')";
+                return $"{edgedbName} := <{edgeqlType}>json_get({jsonValue.Name}, '{x.Name}')";
             });
 
             // return out our insert shape

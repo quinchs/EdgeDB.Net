@@ -250,7 +250,7 @@ namespace EdgeDB
             => InternalBuild(false);
 
         #region Root nodes
-        public QueryBuilder<TType> For(IEnumerable<TType> collection, Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator)
+        public IMultiCardinalityExecutable<TType> For(IEnumerable<TType> collection, Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator)
         {
             AddNode<ForNode>(new ForContext(typeof(TType))
             {

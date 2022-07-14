@@ -1,8 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using EdgeDB.DataTypes;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -30,7 +32,7 @@ namespace EdgeDB.QueryNodes
         /// <exception cref="ArgumentException">
         ///     A type cannot be used as a parameter to a 'FOR' expression
         /// </exception>
-        private string? ParseExpression(string name, string json)
+        private string? ParseExpression(string name, string varName, string json)
         {
             // check if we're returning a query builder
             if (Context.Expression!.ReturnType == typeof(IQueryBuilder))
@@ -45,7 +47,9 @@ namespace EdgeDB.QueryNodes
                     {
                         _ when x.Type == typeof(QueryContext) => new QueryContext(),
                         _ when ReflectionUtils.IsInstanceOfGenericType(typeof(JsonVariable<>), x.Type)
-                            => Activator.CreateInstance(typeof(JsonVariable<>).MakeGenericType(Context.CurrentType), name, jArray),
+                            => typeof(JsonVariable<>).MakeGenericType(Context.CurrentType)
+                                .GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, new Type[] { typeof(string), typeof(string), typeof(JArray)})!
+                                .Invoke(new object?[] { name, varName, jArray })!,
                         _ => throw new ArgumentException($"Cannot use {x.Type} as a parameter to a 'FOR' expression")
                     };
                 }).ToArray();
@@ -81,13 +85,13 @@ namespace EdgeDB.QueryNodes
             var jsonName = QueryUtils.GenerateRandomVariableName();
 
             // set the json variable
-            SetVariable(jsonName, setJson);
+            SetVariable(jsonName, new Json(setJson));
 
             // append the 'FOR' statement
-            Query.Append($"for {name} in <json>${jsonName} union ");
+            Query.Append($"for {name} in json_array_unpack(<json>${jsonName}) union ");
 
             // parse the iterator expression
-            var parsed = ParseExpression(name, setJson);
+            var parsed = ParseExpression(name, jsonName, setJson);
 
             // if it's not null or empty, append the union statement's content
             if (!string.IsNullOrEmpty(parsed))
