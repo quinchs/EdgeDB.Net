@@ -28,6 +28,9 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         public Type CurrentType { get; init; }
 
+        public bool IsJsonVariable
+            => ReflectionUtils.IsInstanceOfGenericType(typeof(JsonVariable<>), CurrentType);
+
         /// <summary>
         ///     Constructs a new <see cref="NodeContext"/>.
         /// </summary>

@@ -18,6 +18,9 @@ namespace EdgeDB
                 type.FullName!.Contains("AnonymousType");
         }
 
+        public static IEnumerable<PropertyInfo> GetEdgeDBTargetProperties(this Type type)
+            => type.GetProperties().Where(x => x.GetCustomAttribute<EdgeDBIgnoreAttribute>() == null);
+
         public static string GetEdgeDBTypeName(this Type type)
         {
             var attr = type.GetCustomAttribute<EdgeDBTypeAttribute>();

@@ -250,6 +250,17 @@ namespace EdgeDB
             => InternalBuild(false);
 
         #region Root nodes
+        public QueryBuilder<TType> For(IEnumerable<TType> collection, Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator)
+        {
+            AddNode<ForNode>(new ForContext(typeof(TType))
+            {
+                Expression = iterator,
+                Set = collection
+            });
+
+            return this;
+        }
+
         /// <inheritdoc cref="IQueryBuilder{TType}.With(string, object?)"/>
         public QueryBuilder<TType> With(string name, object? value)
         {
