@@ -43,7 +43,9 @@ namespace EdgeDB
             {
                 innerLinkType = enumerableType.GenericTypeArguments[0];
                 isMultiLink = true;
-                return IsLink(innerLinkType, out _, out innerLinkType);
+                var result = IsLink(innerLinkType, out _, out var linkType);
+                innerLinkType ??= linkType;
+                return result;
             }
 
             return TypeBuilder.IsValidObjectType(type);
