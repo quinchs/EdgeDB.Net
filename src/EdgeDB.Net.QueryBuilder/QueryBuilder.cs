@@ -17,6 +17,10 @@ namespace EdgeDB
     /// </summary>
     public static class QueryBuilder
     {
+        public static IMultiCardinalityExecutable<TType> For<TType>(IEnumerable<TType> collection, 
+            Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator)
+            => new QueryBuilder<TType>().For(collection, iterator);
+
         /// <inheritdoc cref="IQueryBuilder{TType}.Select"/>
         public static ISelectQuery<TType> Select<TType>()
             => new QueryBuilder<TType>().Select();

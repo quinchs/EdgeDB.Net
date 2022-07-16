@@ -38,50 +38,6 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
-            var set = new List<LinkPerson>()
-            {
-                new LinkPerson
-                {
-                    Email = "email1@example.com",
-                    Name = "test1",
-                },
-                new LinkPerson
-                {
-                    Email = "email2@example.com",
-                    Name = "test2",
-                },
-                new LinkPerson
-                {
-                    Email = "email3@example.com",
-                    Name = "test3",
-                    BestFriend = new LinkPerson
-                    {
-                        Email = "email4@example.com",
-                        Name = "test4"
-                    }
-                },
-                new LinkPerson
-                {
-                    Email = "email5@example.com",
-                    Name = "test5",
-                    BestFriend = new LinkPerson
-                    {
-                        Email = "email6@example.com",
-                        Name = "test6",
-                        BestFriend = new LinkPerson
-                        {
-                            Email = "email7@example.com",
-                            Name = "test7",
-                        }
-                    }
-                }
-            };
-
-            var test = (await new QueryBuilder<LinkPerson>()
-               . For(set, x =>
-                   QueryBuilder.Insert(x, false)
-               ).BuildAsync(client));
-
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 
@@ -191,6 +147,30 @@ namespace EdgeDB.ExampleApp.Examples
                 .BuildAsync(client))
                 .Prettify();
 
+            // Bulk inserts
+            var data = new LinkPerson[]
+            {
+                new LinkPerson
+                {
+                    Email = "test1@mail.com",
+                    Name = "test1",
+                },
+                new LinkPerson
+                {
+                    Email = "test2@mail.com",
+                    Name = "test2",
+                    BestFriend = new LinkPerson
+                    {
+                        Email = "test3@mail.com",
+                        Name = "test3",
+                    }
+                }
+            };
+
+            query = (await QueryBuilder.For(data,
+                    x => QueryBuilder.Insert(x, false)
+                ).BuildAsync(client)).Prettify();
+
             // Else statements (upsert demo)
             query = (await QueryBuilder
                 .Insert(person)
@@ -198,7 +178,7 @@ namespace EdgeDB.ExampleApp.Examples
                 .Else(q =>
                     q.Update(old => new LinkPerson
                     {
-                        Name = EdgeQL.ToUpper(old.Name)
+                        Name = EdgeQL.ToUpper(old!.Name)
                     })
                 )
                 .BuildAsync(client))

@@ -24,7 +24,7 @@ namespace EdgeDB.QueryNodes
         public override void Visit()
         {
             // append 'update type'
-            Query.Append($"update {Context.CurrentType.GetEdgeDBTypeName()}");
+            Query.Append($"update {OperatingType.GetEdgeDBTypeName()}");
             
             // translate the update factory
             _translatedExpression = ExpressionTranslator.Translate(Context.UpdateExpression!, Builder.QueryVariables, Context, Builder.QueryGlobals);

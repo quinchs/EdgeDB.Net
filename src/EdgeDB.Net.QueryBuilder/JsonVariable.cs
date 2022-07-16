@@ -130,10 +130,15 @@ namespace EdgeDB
         {
             return node.Properties().Max(x =>
             {
-                if (x.Value is not JObject jObject)
-                    return depth;
-
-                return CalculateNodeDepth(jObject, depth + 1);
+                switch(x.Value)
+                {
+                    case JObject jObject:
+                        return CalculateNodeDepth(jObject, depth + 1);
+                    case JArray jArray:
+                        return jArray.Max(x => x is JObject subNode ? CalculateNodeDepth(subNode, depth + 1) : depth);
+                    default:
+                        return depth;
+                }
             });
         }
 

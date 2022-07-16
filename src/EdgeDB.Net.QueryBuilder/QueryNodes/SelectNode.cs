@@ -61,7 +61,7 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         /// <returns>The default shape for the current contextual type.</returns>
         private string GetDefaultShape()
-            => GetShape(Context.CurrentType);
+            => GetShape(OperatingType);
 
         /// <summary>
         ///     Gets the shape based on the context of the current node.
@@ -90,7 +90,7 @@ namespace EdgeDB.QueryNodes
                 if (Context.IsFreeObject)
                     Query.Append($"select {shape}");
                 else
-                    Query.Append($"select {Context.SelectName ?? Context.CurrentType.GetEdgeDBTypeName()} {shape}");
+                    Query.Append($"select {Context.SelectName ?? OperatingType.GetEdgeDBTypeName()} {shape}");
             }
             else
             {

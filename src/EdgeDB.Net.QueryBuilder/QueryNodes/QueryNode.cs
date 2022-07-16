@@ -81,6 +81,8 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         internal readonly NodeBuilder Builder;
 
+        protected readonly Type OperatingType;
+
         /// <summary>
         ///     Constructs a new query node with the given builder.
         /// </summary>
@@ -88,6 +90,7 @@ namespace EdgeDB.QueryNodes
         public QueryNode(NodeBuilder builder)
         {
             Builder = builder;
+            OperatingType = GetOperatingType();
         }
 
         /// <summary>
@@ -145,6 +148,11 @@ namespace EdgeDB.QueryNodes
             SetGlobal(name, value, reference);
             return name;
         }
+
+        protected Type GetOperatingType()
+            => Context.CurrentType.IsAssignableTo(typeof(IJsonVariable))
+                ? Context.CurrentType.GenericTypeArguments[0]
+                : Context.CurrentType;
 
         /// <summary>
         ///     Builds the current node, returning the built form <see cref="BuiltQueryNode"/>.

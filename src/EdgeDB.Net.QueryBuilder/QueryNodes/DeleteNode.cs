@@ -19,7 +19,7 @@ namespace EdgeDB.QueryNodes
         /// <inheritdoc/>
         public override void Visit()
         {
-            Query.Append($"delete {Context.SelectName ?? Context.CurrentType.GetEdgeDBTypeName()}");
+            Query.Append($"delete {Context.SelectName ?? OperatingType.GetEdgeDBTypeName()}");
         }
     }
 }

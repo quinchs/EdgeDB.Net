@@ -97,6 +97,9 @@ namespace EdgeDB.QueryNodes
             for (int i = 0; i != pathSections.Length; i++)
                 result = result.GetMember(pathSections[i]).First(x => x is PropertyInfo or FieldInfo)!.GetMemberType();
 
+            if (QueryUtils.IsLink(result, out var isMultiLink, out var innerType) && isMultiLink)
+                return innerType!;
+
             // return the final type.
             return result;
         }
@@ -132,7 +135,7 @@ namespace EdgeDB.QueryNodes
                     // enumerate over each property in the populated object and copy it to our mutable one
                     foreach(var prop in element.Properties())
                     {
-                        if (prop.Value is JObject node)
+                        if (prop.Value is JObject jObject)
                         {
                             // if its a sub-object, add it to the next depth level
                             var mapIndex = i + 1;
@@ -142,15 +145,34 @@ namespace EdgeDB.QueryNodes
 
                             if (depthMap[mapIndex] is null)
                                 depthMap[mapIndex] = new List<DepthNode>() 
-                                { new(type, node) };
+                                { new(type, jObject) };
                             else
-                                depthMap[mapIndex].Add(new(type, node));
+                                depthMap[mapIndex].Add(new(type, jObject));
 
                             // populate the mutable one with the location of the nested object
                             mutableElement[prop.Name] = new JObject()
                             {
                                 new JProperty($"{mappingName}_depth_index", depthMap[mapIndex].Count - 1),
-                                new JProperty($"{mappingName}_depth_map", mapIndex)
+                            };
+                        }
+                        else if (prop.Value is JArray jArray && jArray.All(x => x is JObject))
+                        {
+                            // if its an array, add it to the next depth level
+                            var mapIndex = i + 1;
+
+                            // resolve the objects link type from its path
+                            var type = ResolveTypeFromPath(jsonValue.InnerType, prop.Path);
+
+                            if (depthMap[mapIndex] is null)
+                                depthMap[mapIndex] = new List<DepthNode>(jArray.Select(x => new DepthNode(type, (JObject)x)));
+                            else
+                                depthMap[mapIndex].AddRange(jArray.Select(x => new DepthNode(type, (JObject)x)));
+
+                            // populate the mutable one with the location of the nested object
+                            mutableElement[prop.Name] = new JObject()
+                            {
+                                new JProperty($"{mappingName}_depth_from", (depthMap[mapIndex].Count) - jArray.Count),
+                                new JProperty($"{mappingName}_depth_to", depthMap[mapIndex].Count)
                             };
                         }
                         else
@@ -190,7 +212,7 @@ namespace EdgeDB.QueryNodes
                         var edgedbName = x.GetEdgeDBPropertyName();
                         
                         // if its a link, add a ternary statement for pulling the value out of a sub-map
-                        if (QueryUtils.IsLink(x.PropertyType, out _, out _))
+                        if (QueryUtils.IsLink(x.PropertyType, out var isArray, out _))
                         {
                             // if we're in the last iteration of the depth map, we know for certian there
                             // are no sub types within the current context, we can safely set the link to 
@@ -198,7 +220,10 @@ namespace EdgeDB.QueryNodes
                             if (isLast)
                                 return $"{edgedbName} := {{}}";
 
-                            return $"{edgedbName} := {mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({iterationName}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
+                            // return a slice operator for multi links or a index operator for single links
+                            return isArray 
+                                ? $"{edgedbName} := distinct array_unpack({mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_from') ?? 0:<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_to') ?? 0])" 
+                                : $"{edgedbName} := {mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({iterationName}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
                         }
 
                         // if its a scalar type, use json_get to pull the value and cast it to our property
@@ -229,6 +254,7 @@ namespace EdgeDB.QueryNodes
                 var iterationJson = JsonConvert.SerializeObject(map.Select(x => x.Node));
 
                 SetVariable(variableName, new Json(iterationJson));
+
                 SetGlobal($"{mappingName}_d{i}", query, null);
             }
 
@@ -241,9 +267,12 @@ namespace EdgeDB.QueryNodes
                 var edgedbName = x.GetEdgeDBPropertyName();
 
                 // if its a link, add a ternary statement for pulling the value out of a sub-map
-                if (QueryUtils.IsLink(x.PropertyType, out _, out _))
+                if (QueryUtils.IsLink(x.PropertyType, out var isArray, out _))
                 {
-                    return $"{edgedbName} := {mappingName}_d1[<int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({jsonValue.Name}, '{x.Name}')) != 'null' else <{jsonValue.InnerType.GetEdgeDBTypeName()}>{{}}";
+                    // return a slice operator for multi links or a index operator for single links
+                    return isArray
+                               ? $"{edgedbName} := distinct array_unpack({mappingName}_d1[<int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_from') ?? 0:<int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_to') ?? 0])"
+                               : $"{edgedbName} := {mappingName}_d1[<int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({jsonValue.Name}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
                 }
 
                 // if its a scalar type, use json_get to pull the value and cast it to our property
@@ -272,7 +301,7 @@ namespace EdgeDB.QueryNodes
             
             // use the provide shape and value if they're not null, otherwise
             // use the ones defined in context
-            var type = shapeType ?? Context.CurrentType;
+            var type = shapeType ?? OperatingType;
             var value = shapeValue ?? Context.Value;
 
             // if the value is an expression we can just directly translate it
@@ -280,7 +309,7 @@ namespace EdgeDB.QueryNodes
                 return $"{{ {ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context, Builder.QueryGlobals)} }}";
 
             // get all properties that aren't marked with the EdgeDBIgnore attribute
-            var properties = type.GetProperties().Where(x => x.GetCustomAttribute<EdgeDBIgnoreAttribute>() == null);
+            var properties = type.GetEdgeDBTargetProperties();
 
             foreach(var property in properties)
             {
@@ -405,13 +434,13 @@ namespace EdgeDB.QueryNodes
         public override void Visit()
         {
             // add the current type to the sub query map
-            _subQueryMap.Add(Context.CurrentType);
+            _subQueryMap.Add(OperatingType);
 
             // build the insert shape
             var shape = Context.IsJsonVariable ? BuildJsonShape() : BuildInsertShape();
 
             // append it to our query
-            Query.Append($"insert {(Context.IsJsonVariable ? ((IJsonVariable)Context.Value!).InnerType : Context.CurrentType).GetEdgeDBTypeName()} {shape}");
+            Query.Append($"insert {OperatingType.GetEdgeDBTypeName()} {shape}");
         }
 
         /// <inheritdoc/>
@@ -423,8 +452,8 @@ namespace EdgeDB.QueryNodes
                 if (SchemaInfo is null)
                     throw new NotSupportedException("Cannot use autogenerated unless conflict on without schema interpolation");
 
-                if (!SchemaInfo.TryGetObjectInfo(Context.CurrentType, out var typeInfo))
-                    throw new NotSupportedException($"Could not find type info for {Context.CurrentType}");
+                if (!SchemaInfo.TryGetObjectInfo(OperatingType, out var typeInfo))
+                    throw new NotSupportedException($"Could not find type info for {OperatingType}");
 
                 // get all exclusive properties that aren't the id property
                 var exclusiveProperties = typeInfo.Properties?.Where(x => x.IsExclusive && x.Name != "id");
@@ -440,8 +469,8 @@ namespace EdgeDB.QueryNodes
 
                 Query.Append($" unless conflict on {constraint}");
             }
-            else
-                Query.Append(_elseStatement);
+            
+            Query.Append(_elseStatement);
 
             // if the query builder wants this node as a global
             if (Context.SetAsGlobal && Context.GlobalName != null)
@@ -477,7 +506,7 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         public void ElseDefault()
         {
-            _elseStatement.Append($" else (select {Context.CurrentType.GetEdgeDBTypeName()})");
+            _elseStatement.Append($" else (select {OperatingType.GetEdgeDBTypeName()})");
         }
 
         /// <summary>
