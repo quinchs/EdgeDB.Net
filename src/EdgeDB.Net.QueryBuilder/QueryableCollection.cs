@@ -46,7 +46,7 @@ namespace EdgeDB
         /// <exception cref="EdgeDBErrorException">The item to add violates an exclusive constraint.</exception>
         /// <returns>The added value.</returns>
         public Task<TType?> AddAsync(TType item, CancellationToken token = default)
-            => QueryBuilder.Insert(item).ExecuteAsync(_edgedb, token);
+            => QueryBuilder.Insert(item).ExecuteAsync(_edgedb, token: token);
 
         /// <summary>
         ///     Adds or updates an existing value based on the types unique constraints.
@@ -66,7 +66,7 @@ namespace EdgeDB
                 .Else(b => 
                     (Interfaces.ISingleCardinalityExecutable<TType?>)b.Update(updateFactory)
                 )
-                .ExecuteAsync(_edgedb, token);
+                .ExecuteAsync(_edgedb, token: token);
 
         /// <summary>
         ///     Adds or updates an existing value based on the types unique constraints.
@@ -89,7 +89,7 @@ namespace EdgeDB
                 .UnlessConflict()
                 .Else(q => 
                     (Interfaces.ISingleCardinalityExecutable<TType?>)q.Update(updateFactory!, false)
-                ).ExecuteAsync(_edgedb, token).ConfigureAwait(false);
+                ).ExecuteAsync(_edgedb, token: token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace EdgeDB
         public async Task<bool> TryAddAsync(TType item, CancellationToken token = default)
         {
             var query = QueryBuilder.Insert(item, false).UnlessConflict();
-            var result = await query.ExecuteAsync(_edgedb, token);
+            var result = await query.ExecuteAsync(_edgedb, token: token);
             return result != null;
         }
 
@@ -129,7 +129,7 @@ namespace EdgeDB
                 .Insert(item)
                 .UnlessConflict()
                 .ElseReturn()
-                .ExecuteAsync(_edgedb, token)!;
+                .ExecuteAsync(_edgedb, token: token)!;
 
         /// <summary>
         ///     Deletes a value from the collection.
@@ -150,7 +150,7 @@ namespace EdgeDB
                     await QueryBuilder
                         .Delete
                         .Filter((_, ctx) => ctx.UnsafeLocal<Guid>("id") == id)
-                        .ExecuteAsync(_edgedb, token).ConfigureAwait(false)
+                        .ExecuteAsync(_edgedb, token: token).ConfigureAwait(false)
                     ).Any();
             
             // try to get exclusive property set on the instance
@@ -183,7 +183,7 @@ namespace EdgeDB
             var builder = QueryBuilder;
             foreach (var (prop, name) in variables)
                 builder.AddQueryVariable(name, prop.GetValue(item));
-            return (await builder.Delete.Filter(expr).ExecuteAsync(_edgedb, token).ConfigureAwait(false)).Any();
+            return (await builder.Delete.Filter(expr).ExecuteAsync(_edgedb, token: token).ConfigureAwait(false)).Any();
         }
 
         /// <summary>
@@ -193,7 +193,7 @@ namespace EdgeDB
         /// <param name="token">A cancellation token to cancel the asynchronous insert operation.</param>
         /// <returns>The number of values deleted.</returns>
         public Task<long> DeleteWhereAsync(Expression<Func<TType, bool>> filter, CancellationToken token = default)
-            => ((Interfaces.ISingleCardinalityExecutable<long>)QueryBuilder.Select(() => EdgeQL.Count(QueryBuilder.Delete.Filter(filter)))).ExecuteAsync(_edgedb, token);
+            => ((ISingleCardinalityExecutable<long>)QueryBuilder.Select(() => EdgeQL.Count(QueryBuilder.Delete.Filter(filter)))).ExecuteAsync(_edgedb, token: token);
 
         /// <summary>
         ///     Filters the current collection by a predicate.
@@ -203,7 +203,7 @@ namespace EdgeDB
         /// <returns>A collection of <typeparamref name="TType"/> that match the provided predicate.</returns>
         public async Task<IReadOnlyCollection<TType?>> WhereAsync(Expression<Func<TType, bool>> filter, 
             CancellationToken token = default)
-            => await QueryBuilder.Select().Filter(filter).ExecuteAsync(_edgedb, token);
+            => await QueryBuilder.Select().Filter(filter).ExecuteAsync(_edgedb, token: token);
 
         /// <summary>
         ///     Updates a given value in the collection with an update factory.
@@ -220,7 +220,7 @@ namespace EdgeDB
             => (await QueryBuilder
                 .Update(updateFunc)
                 .Filter(await QueryUtils.GenerateUpdateFilterAsync(_edgedb, value, token))
-                .ExecuteAsync(_edgedb, token).ConfigureAwait(false)).FirstOrDefault();
+                .ExecuteAsync(_edgedb, token: token).ConfigureAwait(false)).FirstOrDefault();
 
         /// <summary>
         ///     Updates a given value in the collection.
@@ -236,6 +236,6 @@ namespace EdgeDB
             => (await QueryBuilder
                 .Update(await QueryUtils.GenerateUpdateFactoryAsync(_edgedb, value, token))
                 .Filter(await QueryUtils.GenerateUpdateFilterAsync(_edgedb, value, token))
-                .ExecuteAsync(_edgedb, token).ConfigureAwait(false)).FirstOrDefault();
+                .ExecuteAsync(_edgedb, token: token).ConfigureAwait(false)).FirstOrDefault();
     }
 }

@@ -106,11 +106,13 @@
         /// </summary>
         /// <param name="query">The query to execute.</param>
         /// <param name="args">Optional collection of arguments within the query.</param>
+        /// <param name="capabilities">The allowed capabilities for the query.</param>
         /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
         /// <returns>
         ///     A task that represents the asynchronous execution operation.
         /// </returns>
-        public abstract Task ExecuteAsync(string query, IDictionary<string, object?>? args = null, CancellationToken token = default);
+        public abstract Task ExecuteAsync(string query, IDictionary<string, object?>? args = null, 
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
 
         /// <summary>
         ///     Executes a given query and returns its results.
@@ -118,14 +120,15 @@
         /// <typeparam name="TResult">The return type of the query.</typeparam>
         /// <param name="query">The query to execute.</param>
         /// <param name="args">Optional collection of arguments within the query.</param>
+        /// <param name="capabilities">The allowed capabilities for the query.</param>
         /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
         /// <returns>
         ///      A task that represents the asynchronous execution operation; the tasks result 
         ///      is a <see cref="IReadOnlyCollection{T}"/> containing the 
         ///      <typeparamref name="TResult"/>(s) returned in the query.
         /// </returns>
-        public abstract Task<IReadOnlyCollection<TResult?>> QueryAsync<TResult>(string query, IDictionary<string, object?>? args = null, 
-            CancellationToken token = default);
+        public abstract Task<IReadOnlyCollection<TResult?>> QueryAsync<TResult>(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
 
         /// <summary>
         ///     Executes a given query and returns the result.
@@ -133,13 +136,14 @@
         /// <typeparam name="TResult">The return type of the query.</typeparam>
         /// <param name="query">The query to execute.</param>
         /// <param name="args">Optional collection of arguments within the query.</param>
+        /// <param name="capabilities">The allowed capabilities for the query.</param>
         /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
         /// <returns>
         ///      A task that represents the asynchronous execution operation; the tasks result 
         ///      is an instance of <typeparamref name="TResult"/>.
         /// </returns>
-        public abstract Task<TResult> QueryRequiredSingleAsync<TResult>(string query, IDictionary<string, object?>? args = null, 
-            CancellationToken token = default);
+        public abstract Task<TResult> QueryRequiredSingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
 
         /// <summary>
         ///     Executes a given query and returns the result; or <see langword="null"/> 
@@ -148,13 +152,14 @@
         /// <typeparam name="TResult">The return type of the query.</typeparam>
         /// <param name="query">The query to execute.</param>
         /// <param name="args">Optional collection of arguments within the query.</param>
+        /// <param name="capabilities">The allowed capabilities for the query.</param>
         /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
         /// <returns>
         ///      A task that represents the asynchronous execution operation; the tasks result 
         ///      is an instance of <typeparamref name="TResult"/>.
         /// </returns>
-        public abstract Task<TResult?> QuerySingleAsync<TResult>(string query, IDictionary<string, object?>? args = null, 
-            CancellationToken token = default);
+        public abstract Task<TResult?> QuerySingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
 
         /// <inheritdoc/>
         async ValueTask IAsyncDisposable.DisposeAsync()

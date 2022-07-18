@@ -73,7 +73,7 @@ namespace EdgeDB.Schema
                     HasDefault = ctx.Raw<bool>("EXISTS .default or (\"std::sequence\" in .target[IS schema::ScalarType].ancestors.name)")
 
                 })
-            }).Filter((x, ctx) => !ctx.UnsafeLocal<bool>("builtin")).ExecuteAsync(edgedb, token);
+            }).Filter((x, ctx) => !ctx.UnsafeLocal<bool>("builtin")).ExecuteAsync(edgedb, token: token);
             
             // add to our cache
             return _schemas[edgedb] = new SchemaInfo(result);

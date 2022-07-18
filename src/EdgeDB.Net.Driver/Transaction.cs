@@ -87,23 +87,24 @@ namespace EdgeDB
         }
 
         /// <inheritdoc/>
-        public Task ExecuteAsync(string query, IDictionary<string, object?>? args = null, CancellationToken token = default)
-            => ExecuteInternalAsync(() => _client.ExecuteAsync(query, args, token));
+        public Task ExecuteAsync(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
+            => ExecuteInternalAsync(() => _client.ExecuteAsync(query, args, capabilities, token));
 
         /// <inheritdoc/>
         public Task<IReadOnlyCollection<TResult?>> QueryAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
-            => ExecuteInternalAsync(() => _client.QueryAsync<TResult>(query, args, token));
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
+            => ExecuteInternalAsync(() => _client.QueryAsync<TResult>(query, args, capabilities, token));
 
         /// <inheritdoc/>
         public Task<TResult?> QuerySingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
-            => ExecuteInternalAsync(() => _client.QuerySingleAsync<TResult>(query, args, token));
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
+            => ExecuteInternalAsync(() => _client.QuerySingleAsync<TResult>(query, args, capabilities, token));
 
         /// <inheritdoc/>
         public Task<TResult> QueryRequiredSingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
-            => ExecuteInternalAsync(() => _client.QueryRequiredSingleAsync<TResult>(query, args, token));
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
+            => ExecuteInternalAsync(() => _client.QueryRequiredSingleAsync<TResult>(query, args, capabilities, token));
     }
 
     public sealed class TransactionSettings

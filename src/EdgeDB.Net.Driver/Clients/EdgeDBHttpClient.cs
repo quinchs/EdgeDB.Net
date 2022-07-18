@@ -199,8 +199,8 @@ namespace EdgeDB
 
         /// <inheritdoc/>
         /// <exception cref="EdgeDBException">The server returned a status code other than 200.</exception>
-        public override async Task ExecuteAsync(string query, IDictionary<string, object?>? args = null, 
-            CancellationToken token = default)
+        public override async Task ExecuteAsync(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
         {
             await ExecuteInternalAsync(query, args, token).ConfigureAwait(false);
         }
@@ -208,7 +208,7 @@ namespace EdgeDB
         /// <inheritdoc/>
         /// <exception cref="EdgeDBException">The server returned a status code other than 200.</exception>
         public override async Task<IReadOnlyCollection<TResult?>> QueryAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
             where TResult : default
         {
             var result = await ExecuteInternalAsync(query, args, token);
@@ -223,7 +223,7 @@ namespace EdgeDB
         /// <inheritdoc/>
         /// <exception cref="EdgeDBException">The server returned a status code other than 200.</exception>
         public override async Task<TResult> QueryRequiredSingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
         {
             var result = await ExecuteInternalAsync(query, args, token);
 
@@ -241,7 +241,7 @@ namespace EdgeDB
         /// <inheritdoc/>
         /// <exception cref="EdgeDBException">The server returned a status code other than 200.</exception>
         public override async Task<TResult?> QuerySingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
             where TResult : default
         {
             var result = await ExecuteInternalAsync(query, args, token);
