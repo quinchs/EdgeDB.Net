@@ -46,7 +46,7 @@ namespace EdgeDB.QueryNodes
                     return x switch
                     {
                         _ when x.Type == typeof(QueryContext) => new QueryContext(),
-                        _ when ReflectionUtils.IsInstanceOfGenericType(typeof(JsonVariable<>), x.Type)
+                        _ when ReflectionUtils.IsSubTypeOfGenericType(typeof(JsonVariable<>), x.Type)
                             => typeof(JsonVariable<>).MakeGenericType(Context.CurrentType)
                                 .GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, new Type[] { typeof(string), typeof(string), typeof(JArray)})!
                                 .Invoke(new object?[] { name, varName, jArray })!,

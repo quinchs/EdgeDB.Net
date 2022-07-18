@@ -28,7 +28,7 @@ namespace EdgeDB
         /// <summary>
         ///     Gets the root lambda function that is currently being translated.
         /// </summary>
-        public LambdaExpression RootExpression { get; }
+        public LambdaExpression RootExpression { get; set; }
         
         /// <summary>
         ///     Gets a collection of method parameters within the <see cref="RootExpression"/>.
@@ -72,12 +72,12 @@ namespace EdgeDB
         /// <summary>
         ///     The collection of query variables.
         /// </summary>
-        private readonly IDictionary<string, object?> _queryArguments;
+        internal readonly IDictionary<string, object?> QueryArguments;
 
         /// <summary>
         ///     The collection of query globals.
         /// </summary>
-        private readonly List<QueryGlobal> _globals;
+        internal readonly List<QueryGlobal> Globals;
 
         /// <summary>
         ///     Constructs a new <see cref="ExpressionContext"/>.
@@ -91,9 +91,9 @@ namespace EdgeDB
         {
             ExpressionTree.Add(rootExpression);
             RootExpression = rootExpression;
-            _queryArguments = queryArguments;
+            QueryArguments = queryArguments;
             NodeContext = context;
-            _globals = globals;
+            Globals = globals;
 
             Parameters = rootExpression.Parameters.ToDictionary(x => x.Name!, x => x.Type);
         }
@@ -106,7 +106,7 @@ namespace EdgeDB
         public string AddVariable(object? value)
         {
             var name = QueryUtils.GenerateRandomVariableName();
-            _queryArguments[name] = value;
+            QueryArguments[name] = value;
             return name;
         }
 
@@ -116,7 +116,7 @@ namespace EdgeDB
         /// <param name="name">The name of the query variable.</param>
         /// <param name="value">The value of the query variable.</param>
         public void SetVariable(string name, object? value)
-            => _queryArguments[name] = value;
+            => QueryArguments[name] = value;
 
         /// <summary>
         ///     Attempts to fetch a query global by reference.
@@ -129,7 +129,7 @@ namespace EdgeDB
         /// </returns>
         public bool TryGetGlobal(object? reference, [MaybeNullWhen(false)]out QueryGlobal global)
         {
-            global = _globals.FirstOrDefault(x => x.Reference == reference);
+            global = Globals.FirstOrDefault(x => x.Reference == reference);
             return global != null;
         }
 
@@ -158,7 +158,7 @@ namespace EdgeDB
         public void SetGlobal(string name, object? value, object? reference)
         {
             var global = new QueryGlobal(name, value, reference);
-            _globals.Add(global);
+            Globals.Add(global);
         }
 
         /// <summary>

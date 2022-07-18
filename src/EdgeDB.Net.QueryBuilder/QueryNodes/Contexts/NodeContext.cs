@@ -29,7 +29,7 @@ namespace EdgeDB.QueryNodes
         public Type CurrentType { get; init; }
 
         public bool IsJsonVariable
-            => ReflectionUtils.IsInstanceOfGenericType(typeof(JsonVariable<>), CurrentType);
+            => ReflectionUtils.IsSubTypeOfGenericType(typeof(JsonVariable<>), CurrentType);
 
         /// <summary>
         ///     Constructs a new <see cref="NodeContext"/>.

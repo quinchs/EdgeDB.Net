@@ -20,7 +20,7 @@ namespace EdgeDB
             return (TType?)ConvertTo(typeof(TType), value);
         }
 
-        private static object? ConvertTo(Type type, object? value)
+        internal static object? ConvertTo(Type type, object? value)
         {
             if (value is null)
             {

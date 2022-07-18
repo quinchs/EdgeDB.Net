@@ -1,6 +1,8 @@
-﻿using EdgeDB.Schema;
+﻿using EdgeDB.QueryNodes;
+using EdgeDB.Schema;
 using EdgeDB.Schema.DataTypes;
 using EdgeDB.Serializer;
+using EdgeDB.Translators.Methods;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -30,6 +32,13 @@ namespace EdgeDB.ExampleApp.Examples
             public MultiLinkPerson[]? BestFriends { get; set; }
         }
 
+        public class ArrayPerson
+        {
+            public string? Name { get; set; }
+            public string? Email { get; set; }
+            public IEnumerable<string>? Roles { get; set; }
+        }
+
         public async Task ExecuteAsync(EdgeDBClient client)
         {
             await QueryBuilderDemo(client);
@@ -38,6 +47,11 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
+            var test = QueryBuilder.Select(() => new
+            {
+                Test = new string[] { "test", "test"}.FirstOrDefault(x => x == "test")
+            }).Build();
+
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 
@@ -178,7 +192,7 @@ namespace EdgeDB.ExampleApp.Examples
                 .Else(q =>
                     q.Update(old => new LinkPerson
                     {
-                        Name = EdgeQL.ToUpper(old!.Name)
+                        Name = old.Name.ToLower()
                     })
                 )
                 .BuildAsync(client))

@@ -23,7 +23,10 @@ namespace EdgeDB.Translators.Expressions
                 object? value = expression.Member.GetMemberValue(constant.Value);
 
                 var varName = context.AddVariable(value);
-                var type = PacketSerializer.GetEdgeQLType(expression.Type);
+                
+                if (!QueryUtils.TryGetScalarType(expression.Type, out var type))
+                    throw new NotSupportedException($"Cannot use {expression.Type} as no edgeql equivalent can be found");
+
                 return $"<{type}>${varName}";
             }
             

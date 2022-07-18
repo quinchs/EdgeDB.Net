@@ -119,6 +119,10 @@ namespace EdgeDB.Translators.Expressions
                 }
             }
 
+            // check if our method translators can translate it
+            if (MethodTranslator.TryTranslateMethod(expression, context, out var translatedMethod))
+                return translatedMethod;
+
             // check if the method has an 'EquivalentOperator' attribute
             var edgeqlOperator = expression.Method.GetCustomAttribute<EquivalentOperator>()?.Operator;
 

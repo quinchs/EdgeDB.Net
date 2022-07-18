@@ -13,6 +13,13 @@ module default {
       constraint exclusive;
     }
   }
+  type ArrayPerson {
+    required property name -> str;
+    required property roles -> array<str>;
+    required property email -> str {
+      constraint exclusive;
+    }
+  }
 
   # for example todo app
   scalar type State extending enum<NotStarted, InProgress, Complete>;

@@ -35,7 +35,7 @@ namespace EdgeDB.Translators.Expressions
                 }
                
                 // translate the value and determine if were setting a value or referencing a value.
-                string? value = TranslateExpression(arg, context.Enter(x => x.LocalScope = expression.Type)); ;
+                string? value = TranslateExpression(arg, context.Enter(x => x.LocalScope = expression.Type));
                 bool isSetter = context.NodeContext.CurrentType.GetProperty(member.Name) == null || arg is MethodCallExpression;
 
                 // add it to our shape

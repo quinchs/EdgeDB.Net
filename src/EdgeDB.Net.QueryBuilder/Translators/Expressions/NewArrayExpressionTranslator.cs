@@ -17,7 +17,14 @@ namespace EdgeDB.Translators.Expressions
         public override string? Translate(NewArrayExpression expression, ExpressionContext context)
         {
             // return out a edgeql set with each element in the dotnet array translated
-            return $"{{ {string.Join(", ", expression.Expressions.Select(x => TranslateExpression(x, context)))} }}";
+            var elements = string.Join(", ", expression.Expressions.Select(x => TranslateExpression(x, context)));
+
+            // if its a collection of link-valid types, serialzie it as a set
+            if(QueryUtils.IsLink(expression.Type, out _, out _))
+                return $"{{ {elements} }}";
+
+            // serialize as a scalar array
+            return $"[{elements}]";
         }
     }
 }

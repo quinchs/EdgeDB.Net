@@ -228,7 +228,8 @@ namespace EdgeDB.QueryNodes
 
                         // if its a scalar type, use json_get to pull the value and cast it to our property
                         // type
-                        var edgeqlType = PacketSerializer.GetEdgeQLType(x.PropertyType);
+                        if (!QueryUtils.TryGetScalarType(x.PropertyType, out var edgeqlType))
+                            throw new NotSupportedException($"Cannot use type {x.PropertyType} as there is no serializer for it");
 
                         return $"{edgedbName} := <{edgeqlType}>json_get({iterationName}, '{x.Name}')";
 
@@ -277,7 +278,8 @@ namespace EdgeDB.QueryNodes
 
                 // if its a scalar type, use json_get to pull the value and cast it to our property
                 // type
-                var edgeqlType = PacketSerializer.GetEdgeQLType(x.PropertyType);
+                if (!QueryUtils.TryGetScalarType(x.PropertyType, out var edgeqlType))
+                    throw new NotSupportedException($"Cannot use type {x.PropertyType} as there is no serializer for it");
 
                 return $"{edgedbName} := <{edgeqlType}>json_get({jsonValue.Name}, '{x.Name}')";
             });
@@ -320,11 +322,9 @@ namespace EdgeDB.QueryNodes
                 // get the equivalent edgedb property name
                 var propertyName = property.GetEdgeDBPropertyName();
                 
-                // get the scalar type
-                var edgeqlType = PacketSerializer.GetEdgeQLType(propType);
 
                 // if a scalar type is found for the property type
-                if(edgeqlType != null)
+                if(QueryUtils.TryGetScalarType(propType, out var edgeqlType))
                 {
                     // set it as a variable and continue the iteration
                     var varName = QueryUtils.GenerateRandomVariableName();

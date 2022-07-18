@@ -137,7 +137,7 @@ namespace EdgeDB.Serializer
         {
             builder = null;
 
-            if (ReflectionUtils.IsInstanceOfGenericType(typeof(List<>), type))
+            if (ReflectionUtils.IsSubTypeOfGenericType(typeof(List<>), type))
                 builder = CreateDynamicList;
 
             return builder != null;
@@ -185,7 +185,7 @@ namespace EdgeDB.Serializer
                 return builder is not null ? builder(parsedArray, innerType) : parsedArray;
             }
 
-            throw new NoTypeConverter(target, value?.GetType() ?? typeof(object));
+            return ObjectBuilder.ConvertTo(target, value);
         }
 
         internal static bool TryGetCustomBuilder(this Type objectType, out MethodInfo? info)

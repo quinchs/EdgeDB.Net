@@ -134,17 +134,37 @@ namespace EdgeDB
         /// <exception cref="NotSupportedException">No translator was found for the given expression.</exception>
         protected static string TranslateExpression(Expression expression, ExpressionContext context)
         {
+            // special fallthru for lambda functions
+            if (expression is LambdaExpression lambda)
+                return _translators[typeof(LambdaExpression)].Translate(lambda, context)!;
+
+            // since some expression classes a private, this while loop will
+            // find the first base class that isn't private and use that class to find a translator.
             var expType = expression.GetType();
             while (!expType.IsPublic)
-                expType = expType.BaseType!;  
+                expType = expType.BaseType!;
 
+            // if we can find a translator for the expression type, use it.
             if (_translators.TryGetValue(expType, out var translator))
             {
-                
                 return translator.Translate(expression, context.Enter(x => x.ExpressionTree.Add(expression)))!;
             }
 
             throw new NotSupportedException($"Failed to find translator for expression type: {expType.Name}.{expression.NodeType}");
         }
+
+        /// <summary>
+        ///     Translates a given expression with the provided expression context.
+        /// </summary>
+        /// <remarks>
+        ///     This method requires <see cref="ExpressionContext"/> and should only be called
+        ///     by child translators that depend on expression translators.
+        /// </remarks>
+        /// <param name="expression">The expression to translate.</param>
+        /// <param name="context">The current context of the calling translator.</param>
+        /// <returns>The string form of the expression.</returns>
+        /// <exception cref="NotSupportedException">No translator was found for the given expression.</exception>
+        internal static string ContextualTranslate(Expression expression, ExpressionContext context)
+            => TranslateExpression(expression, context);
     }
 }

@@ -11,7 +11,7 @@ namespace EdgeDB
 {
     internal class ReflectionUtils
     {
-        public static bool IsInstanceOfGenericType(Type genericType, Type toCheck)
+        public static bool IsSubTypeOfGenericType(Type genericType, Type toCheck)
         {
             Type? type = toCheck;
             while (type != null)

@@ -31,17 +31,21 @@ namespace EdgeDB.Translators.Expressions
                             return null; // nullable converters for include, ex Guid? -> Guid
 
                         // dotnet nullable check
-                        if (ReflectionUtils.IsInstanceOfGenericType(typeof(Nullable<>), expression.Type) && 
+                        if (ReflectionUtils.IsSubTypeOfGenericType(typeof(Nullable<>), expression.Type) && 
                             expression.Type.GenericTypeArguments[0] == expression.Operand.Type)
                         {
                             // no need to cast in edgedb, return the value   
                             return value;
-                        }   
+                        }
 
-                        var type = PacketSerializer.GetEdgeQLType(expression.Type) ?? expression.Type.GetEdgeDBTypeName();
-                       
+                        var type = QueryUtils.TryGetScalarType(expression.Type, out var edgedbType) 
+                            ? edgedbType.ToString()
+                            : expression.Type.GetEdgeDBTypeName();
+                        
                         return $"<{type}>{value}";
                     }
+                case ExpressionType.ArrayLength:
+                    return $"len({TranslateExpression(expression.Operand, context)})";
 
                 // default case attempts to get an IEdgeQLOperator for the given
                 // node type, and uses that to translate the expression.
