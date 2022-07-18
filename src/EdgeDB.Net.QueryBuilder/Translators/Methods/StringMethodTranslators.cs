@@ -142,7 +142,7 @@ namespace EdgeDB.Translators.Methods
             => $"str_replace({instance}, {old}, {newStr})";
 
         /// <summary>
-        ///     Translates the method <see cref="string.Split(char[]?)"/>.
+        ///     Translates the method <see cref="string.Split(char[])"/>.
         /// </summary>
         /// <param name="instance">The instance of the string.</param>
         /// <param name="separator">The char to split by.</param>

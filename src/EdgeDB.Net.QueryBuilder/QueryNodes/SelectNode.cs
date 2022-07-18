@@ -102,7 +102,7 @@ namespace EdgeDB.QueryNodes
         /// <summary>
         ///     Adds a filter to the select node.
         /// </summary>
-        /// <param name="filter">The filter predicate to add.</param>
+        /// <param name="expression">The filter predicate to add.</param>
         public void Filter(LambdaExpression expression)
         {
             var parsedExpression = ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context, Builder.QueryGlobals);

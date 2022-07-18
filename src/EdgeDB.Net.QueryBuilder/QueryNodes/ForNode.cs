@@ -24,6 +24,7 @@ namespace EdgeDB.QueryNodes
         ///     Parsed the given contextual expression into an iterator.
         /// </summary>
         /// <param name="name">The name of the root iterator.</param>
+        /// <param name="varName">The name of the query variable containing the json value.</param>
         /// <param name="json">The json used for iteration.</param>
         /// <returns>
         ///     A edgeql iterator for a 'FOR' statement; or <see langword="null"/> 

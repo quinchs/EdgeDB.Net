@@ -82,6 +82,7 @@ namespace EdgeDB
         ///     Constructs a new <see cref="JsonVariable{T}"/>.
         /// </summary>
         /// <param name="name">The name of the variable.</param>
+        /// <param name="varName">The name of the edgedb variable containing the json value</param>
         /// <param name="array">The <see cref="JArray"/> containing all the json objects.</param>
         internal JsonVariable(string name, string varName, JArray array)
         {

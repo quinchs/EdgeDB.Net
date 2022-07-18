@@ -25,14 +25,14 @@ namespace EdgeDB
             => new();
 
         /// <summary>
-        ///     The client used for introspection & execution.
+        ///     The client used for introspection and execution.
         /// </summary>
         private readonly IEdgeDBQueryable _edgedb;
 
         /// <summary>
         ///     Constructs a new <see cref="QueryableCollection{TType}"/>.
         /// </summary>
-        /// <param name="edgedb">The client to introspect & execute with.</param>
+        /// <param name="edgedb">The client to introspect and execute with.</param>
         internal QueryableCollection(IEdgeDBQueryable edgedb)
         {
             _edgedb = edgedb;

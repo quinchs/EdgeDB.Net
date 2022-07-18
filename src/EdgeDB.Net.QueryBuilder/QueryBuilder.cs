@@ -21,7 +21,7 @@ namespace EdgeDB
             Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator)
             => new QueryBuilder<TType>().For(collection, iterator);
 
-        /// <inheritdoc cref="IQueryBuilder{TType}.Select"/>
+        /// <inheritdoc cref="IQueryBuilder{TType}.Select()"/>
         public static ISelectQuery<TType> Select<TType>()
             => new QueryBuilder<TType>().Select();
 
@@ -29,7 +29,7 @@ namespace EdgeDB
         public static ISelectQuery<TResult> Select<TResult>(Expression<Func<TResult>> selectFunc)
             => new QueryBuilder<TResult>().Select(selectFunc);
 
-        /// <inheritdoc cref="IQueryBuilder{TType}.Select(Expression{Func{QueryContext, TType?}})"/>
+        /// <inheritdoc cref="IQueryBuilder{TType}.Select(Expression{Func{QueryContext, TType}})"/>
         public static ISelectQuery<TType> Select<TType>(Expression<Func<QueryContext, TType?>> shape)
             => new QueryBuilder<TType>().Select(shape);
 
@@ -293,7 +293,7 @@ namespace EdgeDB
             return EnterNewType<TResult>();
         }
 
-        /// <inheritdoc cref="IQueryBuilder{TType}.Select(Expression{Func{QueryContext, TType?}})"/>
+        /// <inheritdoc cref="IQueryBuilder{TType}.Select(Expression{Func{QueryContext, TType}})"/>
         public ISelectQuery<TType> Select(Expression<Func<QueryContext, TType?>> shape)
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType))
@@ -304,7 +304,7 @@ namespace EdgeDB
             return this;
         }
 
-        /// <inheritdoc cref="IQueryBuilder{TType}.Select{TNewType}(Expression{Func{QueryContext, TNewType?}})"/>
+        /// <inheritdoc cref="IQueryBuilder{TType}.Select{TNewType}(Expression{Func{QueryContext, TNewType}})"/>
         public ISelectQuery<TNewType> Select<TNewType>(Expression<Func<QueryContext, TNewType?>> shape)
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType))
@@ -495,7 +495,7 @@ namespace EdgeDB
         /// <summary>
         ///     Adds a 'LIMIT' statement to the current node.
         /// </summary>
-        /// <param name="offset">The lambda function of which the result is the amount to limit by.</param>
+        /// <param name="limit">The lambda function of which the result is the amount to limit by.</param>
         /// <returns>The current builder.</returns>
         /// <exception cref="InvalidOperationException">
         ///     The current node does not support limit statements.
@@ -799,7 +799,6 @@ namespace EdgeDB
         ///     To define a shape, use <see cref="QueryContext.Include{TType}"/> to include a property. any other 
         ///     methods/values will be treated as computed values.
         /// </remarks>
-        /// <typeparam name="TNewType">The type to select.</typeparam>
         /// <param name="shape">The shape to select.</param>
         /// <returns>
         ///     A <see cref="ISelectQuery{TType}"/>.
@@ -882,7 +881,8 @@ namespace EdgeDB
         ///     Builds the current query.
         /// </summary>
         /// <remarks>
-        ///     If the query requires introspection please use <see cref="BuildAsync(IEdgeDBQueryable)"/>.
+        ///     If the query requires introspection please use 
+        ///     <see cref="BuildAsync(IEdgeDBQueryable, CancellationToken)"/>.
         /// </remarks>
         /// <returns>
         ///     A <see cref="BuiltQuery"/>.
