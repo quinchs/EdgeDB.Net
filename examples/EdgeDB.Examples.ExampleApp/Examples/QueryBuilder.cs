@@ -47,10 +47,10 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
-            var test = QueryBuilder.Select(() => new
+            var test = QueryBuilder.Update<MultiLinkPerson>(old => new MultiLinkPerson
             {
-                Test = new string[] { "test", "test"}.FirstOrDefault(x => x == "test")
-            }).Build();
+                BestFriends = EdgeQL.AddLink(QueryBuilder.Insert(new MultiLinkPerson(), false))
+            }).Build().Prettify();
 
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();

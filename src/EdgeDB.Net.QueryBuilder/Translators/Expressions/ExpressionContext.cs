@@ -16,11 +16,6 @@ namespace EdgeDB
     internal class ExpressionContext
     {
         /// <summary>
-        ///     Gets the current expression tree.
-        /// </summary>
-        public List<Expression> ExpressionTree { get; set; } = new();
-
-        /// <summary>
         ///     Gets the calling nodes context.
         /// </summary>
         public NodeContext NodeContext { get; }
@@ -89,7 +84,6 @@ namespace EdgeDB
         public ExpressionContext(NodeContext context, LambdaExpression rootExpression, 
             IDictionary<string, object?> queryArguments, List<QueryGlobal> globals)
         {
-            ExpressionTree.Add(rootExpression);
             RootExpression = rootExpression;
             QueryArguments = queryArguments;
             NodeContext = context;
@@ -170,8 +164,6 @@ namespace EdgeDB
         {
             var exp = (ExpressionContext)MemberwiseClone();
             func(exp);
-            // creates a new instance as we dont want to copy ref of this contexts tree.
-            exp.ExpressionTree = ExpressionTree.ToList(); 
             return exp;
         }
     }

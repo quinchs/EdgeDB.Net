@@ -98,6 +98,17 @@ namespace EdgeDB.Translators.Expressions
                                             });
                                         }
                                         break;
+                                    case MethodCallExpression methodCall:
+                                        var parsed = TranslateExpression(methodCall, context);
+                                        if(context.HasInitializationOperator)
+                                        {
+                                            initializations.Add($"{memberName} {parsed}");
+                                            context.HasInitializationOperator = false;
+                                        }
+                                        else
+                                            initializations.Add($"{memberName} := {parsed}");
+                                        isSubQuery = false;
+                                        break;
                                     default:
                                         throw new NotSupportedException($"Cannot set links with a {assignment.Expression} expression.");
                                 }

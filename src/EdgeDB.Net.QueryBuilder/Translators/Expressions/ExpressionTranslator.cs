@@ -147,7 +147,7 @@ namespace EdgeDB
             // if we can find a translator for the expression type, use it.
             if (_translators.TryGetValue(expType, out var translator))
             {
-                return translator.Translate(expression, context.Enter(x => x.ExpressionTree.Add(expression)))!;
+                return translator.Translate(expression, context)!;
             }
 
             throw new NotSupportedException($"Failed to find translator for expression type: {expType.Name}.{expression.NodeType}");
