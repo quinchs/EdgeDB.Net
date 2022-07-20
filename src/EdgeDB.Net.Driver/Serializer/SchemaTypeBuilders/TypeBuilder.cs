@@ -311,6 +311,9 @@ namespace EdgeDB.Serializer
 
         private TypeDeserializerFactory CreateDefaultFactory()
         {
+            if (_type == typeof(object))
+                return (data) => data;
+
             // if type is anon type
             if (_type.GetCustomAttribute<CompilerGeneratedAttribute>() != null)
             {

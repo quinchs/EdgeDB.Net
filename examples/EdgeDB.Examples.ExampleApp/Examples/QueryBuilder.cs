@@ -47,6 +47,8 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
+            var test2 = await client.QueryAsync<dynamic>("select Person { name }");
+
             var test = QueryBuilder.Update<MultiLinkPerson>(old => new MultiLinkPerson
             {
                 BestFriends = EdgeQL.AddLink(QueryBuilder.Insert(new MultiLinkPerson(), false))
