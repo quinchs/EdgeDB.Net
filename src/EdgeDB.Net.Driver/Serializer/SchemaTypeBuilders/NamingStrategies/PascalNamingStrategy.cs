@@ -9,7 +9,7 @@ namespace EdgeDB.Serializer
 {
     public sealed class PascalNamingStrategy : INamingStrategy
     {
-        public string GetName(PropertyInfo property)
+        public string GetName(MemberInfo property)
         {
             var str = property.Name;
 

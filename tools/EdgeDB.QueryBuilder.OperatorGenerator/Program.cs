@@ -5,7 +5,7 @@ using YamlDotNet.Serialization.NamingConventions;
 using EdgeDB.QueryBuilder.OperatorGenerator;
 using System.Text.RegularExpressions;
 
-const string OperatorsOutputDir = "../../../../EdgeDB.Net.QueryBuilder/Operators";
+const string OperatorsOutputDir = "../../../../../src/EdgeDB.Net.QueryBuilder/Operators";
 const string EdgeQLOutput = "../../../../../src/EdgeDB.Net.QueryBuilder";
 const string OperatorDefinitionFile = "../../../operators.yml";
 const string ParamaterNames = "abcdefghijklmnopqrstuvwxyz";
@@ -190,7 +190,7 @@ void BuildSingleOperator(string section, EdgeQLOperator op)
                 opValue = $"ExpressionType.{op.Expression}";
             }
 
-            writer.AppendLine($"public ExpressionType? Operator => {opValue};");
+            writer.AppendLine($"public ExpressionType? Expression => {opValue};");
             writer.AppendLine($"public string EdgeQLOperator => \"{op.Operator}\";");
         }
     }

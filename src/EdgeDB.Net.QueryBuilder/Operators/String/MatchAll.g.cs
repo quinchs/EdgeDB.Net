@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class StringMatchAll : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "re_match_all({0}, {1})";
     }
 }

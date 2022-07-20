@@ -13,6 +13,13 @@ module default {
       constraint exclusive;
     }
   }
+  type ArrayPerson {
+    required property name -> str;
+    required property roles -> array<str>;
+    required property email -> str {
+      constraint exclusive;
+    }
+  }
 
   # for example todo app
   scalar type State extending enum<NotStarted, InProgress, Complete>;
@@ -36,5 +43,22 @@ module default {
   }
   type OtherThing extending AbstractThing {
     required property attribute -> str;
+  }
+
+  # for query builder
+  type LinkPerson {
+    required property name -> str;
+    required property email -> str {
+      constraint exclusive;
+    }
+    link best_friend -> LinkPerson;
+  }
+
+  type MultiLinkPerson {
+    required property name -> str;
+    required property email -> str {
+      constraint exclusive;
+    }
+    multi link best_friends -> MultiLinkPerson;
   }
 }

@@ -244,7 +244,7 @@ namespace EdgeDB
                     }
                 };
 
-                var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(token, _disconnectTokenSource.Token, GetTimeoutToken());
+                var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(token, _disconnectTokenSource.Token);
 
                 linkedToken.Token.Register(() => tcs.TrySetCanceled(linkedToken.Token));
 

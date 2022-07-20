@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class NumbersSum : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "sum({0})";
     }
 }

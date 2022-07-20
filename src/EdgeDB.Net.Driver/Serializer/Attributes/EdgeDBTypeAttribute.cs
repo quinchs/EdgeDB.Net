@@ -6,6 +6,10 @@
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
     public class EdgeDBTypeAttribute : Attribute
     {
+        /// <summary>
+        ///     Gets or sets the module name for this type.
+        /// </summary>
+        public string? ModuleName { get; init; }
         internal readonly string? Name;
 
         /// <summary>

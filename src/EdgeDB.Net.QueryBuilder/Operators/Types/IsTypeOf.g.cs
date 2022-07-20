@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class TypesIsTypeOf : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "{0} is typeof {1}";
     }
 }

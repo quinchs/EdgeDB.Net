@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class TemporalGetTransactionDateTime : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "std::datetime_of_transaction()";
     }
 }

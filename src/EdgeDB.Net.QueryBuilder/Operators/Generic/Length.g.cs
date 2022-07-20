@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class GenericLength : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "len({0})";
     }
 }

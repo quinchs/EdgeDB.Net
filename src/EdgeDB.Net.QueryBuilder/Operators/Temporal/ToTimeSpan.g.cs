@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class TemporalToTimeSpan : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "to_duration(<hours := {0?}>, <minutes := {1?}>, <seconds := {2?}> <microseconds := {3?}>)";
     }
 }

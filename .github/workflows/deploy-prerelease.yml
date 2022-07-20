@@ -2,7 +2,7 @@ name: NuGet Deploy (Prerelease)
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ dev, feat/querybuilder-v2 ]
 
 env: 
   BuildNumber: "${{ github.run_number }}"
@@ -19,9 +19,13 @@ jobs:
           include-prerelease: true
       - name: Install dependencies
         run: dotnet restore
-      - name: Build
+      - name: Build Driver
         run: dotnet build src/EdgeDB.Net.Driver/EdgeDB.Net.Driver.csproj --configuration Release --no-restore
-      - name: Pack
+      - name: Build Query Builder
+        run: dotnet build src/EdgeDB.Net.QueryBuilder/EdgeDB.Net.QueryBuilder.csproj --configuration Release --no-restore
+      - name: Pack Driver
         run: dotnet pack src/EdgeDB.Net.Driver/EdgeDB.Net.Driver.csproj -c Release -o ./artifacts --no-build
+      - name: Pack QueryBuilder
+        run: dotnet pack src/EdgeDB.Net.QueryBuilder/EdgeDB.Net.QueryBuilder.csproj -c Release -o ./artifacts --no-build
       - name: Upload
         run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_KEY }} --source https://www.myget.org/F/edgedb-net/api/v2/package

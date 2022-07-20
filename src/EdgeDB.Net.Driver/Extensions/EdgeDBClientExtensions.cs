@@ -14,21 +14,23 @@ namespace EdgeDB
         /// <param name="client">The client on which to preform the query on.</param>
         /// <param name="query">The query to execute.</param>
         /// <param name="args">Optional collection of arguments within the query.</param>
+        /// <param name="capabilities">The allowed capabilities for the query.</param>
         /// <returns>
         ///     A task representing the asynchronous query operation. The tasks result is 
         ///     the json result of the query.
         /// </returns>
         /// <exception cref="ResultCardinalityMismatchException">The query returned more than 1 datapoint.</exception>
         public static async Task<string> QueryJsonAsync(this EdgeDBBinaryClient client, 
-            string query, IDictionary<string, object?>? args = null)
+            string query, IDictionary<string, object?>? args = null, 
+            Capabilities capabilities = Capabilities.Modifications)
         {
-            var result = await client.ExecuteInternalAsync(query, args, Cardinality.Many, format: IOFormat.Json).ConfigureAwait(false);
+            var result = await client.ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, format: IOFormat.Json).ConfigureAwait(false);
 
             if(result.Data.Count >= 2)
             {
                 throw new ResultCardinalityMismatchException(Cardinality.AtMostOne, Cardinality.Many);
             }
-
+            
             return result.Data.Count == 1
                 ? (string)result.Deserializer.Deserialize(result.Data[0].PayloadBuffer)!
                 : "[]";
@@ -40,14 +42,16 @@ namespace EdgeDB
         /// <param name="client">The client on which to preform the query on.</param>
         /// <param name="query">The query to execute.</param>
         /// <param name="args">Optional collection of arguments within the query.</param>
+        /// <param name="capabilities">The allowed capabilities for the query.</param>
         /// <returns>
         ///     A task representing the asynchronous query operation. The tasks result is 
         ///     the json result of the query.
         /// </returns>
         public static async Task<string[]> QueryJsonElementsAsync(this EdgeDBBinaryClient client,
-            string query, IDictionary<string, object?>? args = null)
+            string query, IDictionary<string, object?>? args = null,
+            Capabilities capabilities = Capabilities.Modifications)
         {
-            var result = await client.ExecuteInternalAsync(query, args, Cardinality.Many, format: IOFormat.JsonElements).ConfigureAwait(false);
+            var result = await client.ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, format: IOFormat.JsonElements).ConfigureAwait(false);
 
             string[] elements = new string[result.Data.Count];
 

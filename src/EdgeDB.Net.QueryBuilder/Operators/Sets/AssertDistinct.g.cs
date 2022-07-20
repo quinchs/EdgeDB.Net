@@ -4,7 +4,7 @@ namespace EdgeDB.Operators
 {
     internal class SetsAssertDistinct : IEdgeQLOperator
     {
-        public ExpressionType? ExpressionType => null;
+        public ExpressionType? Expression => null;
         public string EdgeQLOperator => "assert_distinct({0})";
     }
 }
