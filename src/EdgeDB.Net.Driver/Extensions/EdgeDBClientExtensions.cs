@@ -14,6 +14,7 @@ namespace EdgeDB
         /// <param name="client">The client on which to preform the query on.</param>
         /// <param name="query">The query to execute.</param>
         /// <param name="args">Optional collection of arguments within the query.</param>
+        /// <param name="capabilities">The allowed capabilities for the query.</param>
         /// <returns>
         ///     A task representing the asynchronous query operation. The tasks result is 
         ///     the json result of the query.
@@ -41,6 +42,7 @@ namespace EdgeDB
         /// <param name="client">The client on which to preform the query on.</param>
         /// <param name="query">The query to execute.</param>
         /// <param name="args">Optional collection of arguments within the query.</param>
+        /// <param name="capabilities">The allowed capabilities for the query.</param>
         /// <returns>
         ///     A task representing the asynchronous query operation. The tasks result is 
         ///     the json result of the query.
