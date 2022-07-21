@@ -91,9 +91,10 @@ namespace EdgeDB
 
         private TaskCompletionSource _readySource;
         private TaskCompletionSource _authCompleteSource;
-        private readonly CancellationTokenSource _readyCancelTokenSource;
+        private CancellationTokenSource _readyCancelTokenSource;
         private readonly SemaphoreSlim _semaphore;
         private readonly SemaphoreSlim _commandSemaphore;
+        private readonly SemaphoreSlim _connectSemaphone;
         private readonly EdgeDBConfig _config;
         private uint _currentRetries;
 
@@ -110,6 +111,7 @@ namespace EdgeDB
             Logger = config.Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
             _semaphore = new(1, 1);
             _commandSemaphore = new(1, 1);
+            _connectSemaphone = new(1, 1);
             Connection = connection;
             _readySource = new();
             _readyCancelTokenSource = new();
@@ -141,10 +143,16 @@ namespace EdgeDB
             Capabilities? capabilities = Capabilities.Modifications, IOFormat format = IOFormat.Binary, bool isRetry = false, 
             CancellationToken token = default)
         {
+
+            // if the current client is not connected, reconnect it
+            if (!Duplexer.IsConnected)
+                await ReconnectAsync(token);
+
             var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(token, DisconnectCancelToken).Token;
 
             // safe to allow taskcancelledexception at this point since no data has been sent to the server.
-            await _semaphore.WaitAsync(linkedToken).ConfigureAwait(false);
+            // dont pass linked token as we want to check our connection state below
+            await _semaphore.WaitAsync(token).ConfigureAwait(false);
 
             IsIdle = false;
             bool released = false;
@@ -307,8 +315,9 @@ namespace EdgeDB
         /// <exception cref="EdgeDBErrorException">The client received an <see cref="ErrorResponse"/>.</exception>
         /// <exception cref="UnexpectedMessageException">The client received an unexpected message.</exception>
         /// <exception cref="MissingCodecException">A codec could not be found for the given input arguments or the result.</exception>
-        public override async Task ExecuteAsync(string query, IDictionary<string, object?>? args = null, CancellationToken token = default)
-            => await ExecuteInternalAsync(query, args, Cardinality.Many, token: token).ConfigureAwait(false);
+        public override async Task ExecuteAsync(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
+            => await ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, token: token).ConfigureAwait(false);
 
         /// <inheritdoc/>
         /// <exception cref="EdgeDBException">A general error occored.</exception>
@@ -318,10 +327,10 @@ namespace EdgeDB
         /// <exception cref="InvalidOperationException">Target type doesn't match received type.</exception>
         /// <exception cref="TargetInvocationException">Cannot construct a <typeparamref name="TResult"/>.</exception>
         public override async Task<IReadOnlyCollection<TResult?>> QueryAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
             where TResult : default
         {
-            var result = await ExecuteInternalAsync(query, args, Cardinality.Many, token: token);
+            var result = await ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, token: token);
 
             List<TResult?> returnResults = new();
 
@@ -343,10 +352,10 @@ namespace EdgeDB
         /// <exception cref="InvalidOperationException">Target type doesn't match received type.</exception>
         /// <exception cref="TargetInvocationException">Cannot construct a <typeparamref name="TResult"/>.</exception>
         public override async Task<TResult?> QuerySingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
             where TResult : default
         {
-            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, token: token);
+            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, capabilities, token: token);
 
             if (result.Data.Count > 1)
                 throw new ResultCardinalityMismatchException(Cardinality.AtMostOne, Cardinality.Many);
@@ -368,9 +377,9 @@ namespace EdgeDB
         /// <exception cref="InvalidOperationException">Target type doesn't match received type.</exception>
         /// <exception cref="TargetInvocationException">Cannot construct a <typeparamref name="TResult"/>.</exception>
         public override async Task<TResult> QueryRequiredSingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            CancellationToken token = default)
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
         {
-            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, token: token);
+            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, capabilities, token: token);
 
             if (result.Data.Count is > 1 or 0)
                 throw new ResultCardinalityMismatchException(Cardinality.One, result.Data.Count > 1 ? Cardinality.Many : Cardinality.AtMostOne);
@@ -380,6 +389,38 @@ namespace EdgeDB
             return queryResult.PayloadBuffer is null
                 ? throw new MissingRequiredException()
                 : ObjectBuilder.BuildResult<TResult>(result.PrepareStatement.OutputTypedescId, result.Deserializer.Deserialize(queryResult.PayloadBuffer))!;
+        }
+
+        /// <inheritdoc/>
+        /// <exception cref="ResultCardinalityMismatchException">The results cardinality was not what the query expected.</exception>
+        /// <exception cref="EdgeDBException">A general error occored.</exception>
+        /// <exception cref="EdgeDBErrorException">The client received an <see cref="ErrorResponse"/>.</exception>
+        /// <exception cref="UnexpectedMessageException">The client received an unexpected message.</exception>
+        /// <exception cref="MissingCodecException">A codec could not be found for the given input arguments or the result.</exception>
+        public override async Task<DataTypes.Json> QueryJsonAsync(string query, IDictionary<string, object?>? args = null, Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
+        {
+            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, capabilities, IOFormat.Json, token: token);
+            
+            if (result.Data.Count > 1)
+                throw new ResultCardinalityMismatchException(Cardinality.AtMostOne, Cardinality.Many);
+
+            return result.Data.Count == 1
+                ? (string)result.Deserializer.Deserialize(result.Data[0].PayloadBuffer)!
+                : "[]";
+        }
+
+        /// <inheritdoc/>
+        /// <exception cref="EdgeDBException">A general error occored.</exception>
+        /// <exception cref="EdgeDBErrorException">The client received an <see cref="ErrorResponse"/>.</exception>
+        /// <exception cref="UnexpectedMessageException">The client received an unexpected message.</exception>
+        /// <exception cref="MissingCodecException">A codec could not be found for the given input arguments or the result.</exception>
+        public override async Task<IReadOnlyCollection<DataTypes.Json>> QueryJsonElementsAsync(string query, IDictionary<string, object?>? args = null, Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
+        {
+            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, capabilities, IOFormat.Json, token: token);
+
+            return result.Data.Any()
+                ? result.Data.Select(x => new DataTypes.Json((string?)result.Deserializer.Deserialize(x.PayloadBuffer))).ToImmutableArray()
+                : ImmutableArray<DataTypes.Json>.Empty;
         }
         #endregion
 
@@ -445,7 +486,7 @@ namespace EdgeDB
         private async Task StartSASLAuthenticationAsync(AuthenticationStatus authStatus)
         {
             // steal the sephamore to stop any query attempts.
-            await _semaphore.WaitAsync().ConfigureAwait(false);
+            //await _semaphore.WaitAsync().ConfigureAwait(false);
 
             bool released = false;
             IsIdle = false;
@@ -598,26 +639,39 @@ namespace EdgeDB
         /// <inheritdoc/>
         public override async ValueTask ConnectAsync(CancellationToken token = default)
         {
-            _authCompleteSource = new();
+            await _connectSemaphone.WaitAsync();
 
-            await ConnectInternalAsync(token: token);
+            try
+            {
+                _authCompleteSource = new();
 
-            var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(token, _readyCancelTokenSource.Token);
+                await ConnectInternalAsync(token: token);
 
-            token.ThrowIfCancellationRequested();
+                var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(token, _readyCancelTokenSource.Token);
 
-            // wait for auth promise
-            await Task.Run(() => Task.WhenAll(_readySource.Task, _authCompleteSource.Task), linkedToken.Token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
 
-            // call base to notify listeners that we connected.
-            await base.ConnectAsync(token);
+                // wait for auth promise
+                await Task.Run(() => Task.WhenAll(_readySource.Task, _authCompleteSource.Task), linkedToken.Token).ConfigureAwait(false);
+
+                // call base to notify listeners that we connected.
+                await base.ConnectAsync(token);
+            }
+            finally
+            {
+                _connectSemaphone.Release();
+            }
         }
 
         private async Task ConnectInternalAsync(int attempts = 0, CancellationToken token = default)
         {
             try
             {
+                if (IsConnected)
+                    return;
+
                 _readySource = new();
+                _readyCancelTokenSource = new();
                 _authCompleteSource = new();
 
                 await Duplexer.ResetAsync();
@@ -701,6 +755,7 @@ namespace EdgeDB
             // if we receive a disconnect from the duplexer we should call our disconnect methods to property close down our client.
             await CloseStreamAsync().ConfigureAwait(false);
             await base.DisconnectAsync();
+            Duplexer.OnMessage -= HandlePayloadAsync;
         }
 
         #endregion

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace EdgeDB.Serializer
 {
@@ -228,7 +229,12 @@ namespace EdgeDB.Serializer
 
                 // register them with the default builder
                 foreach (var type in types)
-                    _typeInfo.TryAdd(type, new(type));
+                {
+                    var info = new TypeDeserializeInfo(type);
+                    _typeInfo.TryAdd(type, info);
+                    foreach (var parentType in _typeInfo.Where(x => (x.Key.IsInterface || x.Key.IsAbstract) && x.Key != type && type.IsAssignableTo(x.Key)))
+                        parentType.Value.AddOrUpdateChildren(info);
+                }
 
                 // mark this assembly as scanned
                 _scannedAssemblies.Add(identifier);
@@ -245,7 +251,7 @@ namespace EdgeDB.Serializer
             // look for any types that inherit already defined abstract types
             foreach (var abstractType in _typeInfo.Where(x => x.Value.IsAbtractType))
             {
-                var childTypes = assembly.DefinedTypes.Where(x => !_typeInfo.ContainsKey(x) && x.IsSubclassOf(abstractType.Key));
+                var childTypes = assembly.DefinedTypes.Where(x => (x.IsSubclassOf(abstractType.Key) || x.ImplementedInterfaces.Contains(abstractType.Key) || x.IsAssignableTo(abstractType.Key)));
                 abstractType.Value.AddOrUpdateChildren(childTypes.Select(x => new TypeDeserializeInfo(x)));
             }
         }
@@ -259,7 +265,7 @@ namespace EdgeDB.Serializer
         public string EdgeDBTypeName { get; }
 
         public bool IsAbtractType
-            => _type.IsAbstract;
+            => _type.IsAbstract || _type.IsInterface;
 
         public Dictionary<Type, TypeDeserializeInfo> Children { get; } = new();
 
@@ -281,12 +287,13 @@ namespace EdgeDB.Serializer
             EdgeDBTypeName = _type.GetCustomAttribute<EdgeDBTypeAttribute>()?.Name ?? _type.Name;
         }
 
+        public void AddOrUpdateChildren(TypeDeserializeInfo child)
+           => Children[child._type] = child;
+        
         public void AddOrUpdateChildren(IEnumerable<TypeDeserializeInfo> children)
         {
-            foreach(var child in children)
-            {
-                Children[child._type] = child;
-            }
+            foreach (var child in children)
+                AddOrUpdateChildren(child);
         }
 
         public void UpdateFactory(TypeDeserializerFactory factory)
@@ -296,6 +303,49 @@ namespace EdgeDB.Serializer
 
         private TypeDeserializerFactory CreateDefaultFactory()
         {
+            if (_type == typeof(object))
+                return (data) => data;
+
+            // if type is anon type
+            if (_type.GetCustomAttribute<CompilerGeneratedAttribute>() != null)
+            {
+                var props = _type.GetProperties();
+                return (data) =>
+                {
+                    object?[] ctorParams = new object[props.Length];
+                    for (int i = 0; i != ctorParams.Length; i++)
+                    {
+                        var prop = props[i];
+
+                        if (!data.TryGetValue(TypeBuilder.NamingStrategy.GetName(prop), out var value))
+                        {
+                            ctorParams[i] = ReflectionUtils.GetDefault(prop.PropertyType);
+                        }
+                        var valueType = value?.GetType();
+                        if (valueType == null)
+                        {
+                            ctorParams[i] = ReflectionUtils.GetDefault(prop.PropertyType);
+                            continue;
+                        }
+                        if (valueType.IsAssignableTo(prop.PropertyType))
+                        {
+                            ctorParams[i] = value;
+                        }
+                        else if (prop.PropertyType.IsEnum && value is string str) // enums
+                        {
+                            ctorParams[i] = Enum.Parse(prop.PropertyType, str);
+                        }
+                        else if (value is object?[] objArray && prop.PropertyType.IsAssignableTo(typeof(IEnumerable)))
+                        {
+                            ctorParams[i] = ObjectBuilder.ConvertCollection(prop.PropertyType, valueType, value);
+                        }
+                        else
+                            throw new InvalidOperationException($"Cannot assign property {prop.Name} with type {valueType}");
+                    }
+                    return Activator.CreateInstance(_type, ctorParams)!;
+                };
+            }
+
             // if type has custom method builder
             if (_type.TryGetCustomBuilder(out var methodInfo))
             {
