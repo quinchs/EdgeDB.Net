@@ -58,7 +58,7 @@ namespace EdgeDB.Codecs
 
         public void Serialize(PacketWriter writer, object? value)
         {
-            throw new NotImplementedException();
+            writer.Write(0);
         }
 
         public void SerializeArguments(PacketWriter writer, object? value)

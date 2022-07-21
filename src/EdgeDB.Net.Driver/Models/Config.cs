@@ -14,11 +14,11 @@ namespace EdgeDB.Models
 
     public sealed class Config
     {
-        public TimeSpan IdleTransationTimeout { get; }
-        public TimeSpan QueryExecutionTimeout { get; }
-        public bool AllowDMLInFunctions { get; }
-        public DDLPolicy AllowBareDDL { get; }
-        public bool ApplyAccessPolicies { get; }
+        public TimeSpan IdleTransationTimeout { get; init; }
+        public TimeSpan QueryExecutionTimeout { get; init; }
+        public bool AllowDMLInFunctions { get; init; }
+        public DDLPolicy AllowBareDDL { get; init; }
+        public bool ApplyAccessPolicies { get; init; }
 
         internal Config()
         {
@@ -27,6 +27,28 @@ namespace EdgeDB.Models
             AllowDMLInFunctions = false;
             AllowBareDDL = DDLPolicy.AlwaysAllow;
             ApplyAccessPolicies = true;
+        }
+
+        internal IDictionary<string, object?> Serialize()
+        {
+            var dict = new Dictionary<string, object?>();
+
+            if(IdleTransationTimeout.TotalSeconds != 10)
+                dict["idle_transaction_timeout"] = IdleTransationTimeout;
+
+            if (QueryExecutionTimeout != TimeSpan.Zero)
+                dict["query_execution_timeout"] = QueryExecutionTimeout;
+
+            if(AllowDMLInFunctions)
+                dict["allow_dml_in_functions"] = true;
+
+            if (AllowBareDDL != DDLPolicy.AlwaysAllow)
+                dict["allow_bare_ddl"] = AllowBareDDL;
+
+            if (!ApplyAccessPolicies)
+                dict["apply_access_policies"] = false;
+            
+            return dict;
         }
     }
 
