@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EdgeDB.Models
+namespace EdgeDB.State
 {
     public enum DDLPolicy
     {
@@ -50,6 +50,9 @@ namespace EdgeDB.Models
             
             return dict;
         }
+
+        public static Config Default
+            => new();
     }
 
     public sealed class ConfigProperties

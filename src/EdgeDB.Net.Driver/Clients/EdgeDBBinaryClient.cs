@@ -81,12 +81,6 @@ namespace EdgeDB
         /// </summary>
         public TransactionState TransactionState { get; private set; }
 
-        /// <summary>
-        ///     Gets the clients session
-        /// </summary>
-        public Session Session { get; private set; }
-
-        
         internal byte[] ServerKey;
         internal int SuggestedPoolConcurrency;
         internal ILogger Logger;
@@ -122,7 +116,6 @@ namespace EdgeDB
         public EdgeDBBinaryClient(EdgeDBConnection connection, EdgeDBConfig config, ulong? clientId = null)
             : base(clientId ?? 0)
         {
-            Session = new();
             Logger = config.Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
             Connection = connection;
             ServerKey = new byte[32];

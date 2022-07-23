@@ -8,15 +8,15 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.Codecs
 {
-    internal class SparceObject : ICodec<object>, IArgumentCodec<object>
+    internal class SparceObject : ICodec<object>
     {
         private readonly ICodec[] _innerCodecs;
-        private readonly ShapeElement[] _shape;
+        private readonly List<string> _fieldNames;
 
         internal SparceObject(ICodec[] innerCodecs, ShapeElement[] shape)
         {
             _innerCodecs = innerCodecs;
-            _shape = shape;
+            _fieldNames = shape.Select(x => x.Name).ToList();
         }
 
         public object? Deserialize(ref PacketReader reader)
@@ -34,13 +34,13 @@ namespace EdgeDB.Codecs
             for (int i = 0; i != numElements; i++)
             {
                 var index = reader.ReadInt32();
-                var shapeElement = _shape[index];
+                var elementName = _fieldNames[index];
 
                 var length = reader.ReadInt32();
 
                 if (length is -1)
                 {
-                    dataDictionary.Add(shapeElement.Name, null);
+                    dataDictionary.Add(elementName, null);
                     continue;
                 }
 
@@ -50,7 +50,7 @@ namespace EdgeDB.Codecs
 
                 value = _innerCodecs[i].Deserialize(innerData);
 
-                dataDictionary.Add(shapeElement.Name, value);
+                dataDictionary.Add(elementName, value);
             }
 
             return data;
@@ -58,12 +58,32 @@ namespace EdgeDB.Codecs
 
         public void Serialize(PacketWriter writer, object? value)
         {
-            writer.Write(0);
-        }
-
-        public void SerializeArguments(PacketWriter writer, object? value)
-        {
+            if (value is not IDictionary<string, object?> dict)
+                throw new InvalidOperationException($"Cannot serialize {value?.GetType() ?? Type.Missing} as a sparce object.");
             
+            if(!dict.Any())
+            {
+                writer.Write(0);
+                return;
+            }
+
+            writer.Write(dict.Count);
+
+            foreach(var element in dict)
+            {
+                var index = _fieldNames.IndexOf(element.Key);
+
+                if (index == -1)
+                    throw new MissingCodecException($"No serializer found for field {element.Key}");
+
+                writer.Write(index);
+
+                using var subWriter = new PacketWriter();
+                var codec = _innerCodecs[index];
+                codec.Serialize(subWriter, element.Value);
+                writer.Write(subWriter.Length);
+                writer.Write(subWriter);
+            }
         }
     }
 }
