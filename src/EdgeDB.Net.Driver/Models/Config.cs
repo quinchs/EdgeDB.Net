@@ -51,6 +51,9 @@ namespace EdgeDB.State
             return dict;
         }
 
+        internal Config Clone()
+            => (Config)MemberwiseClone();
+
         public static Config Default
             => new();
     }

@@ -211,6 +211,10 @@ namespace EdgeDB
                         return false;
                     }
 
+                    var stateBuf = _stateCodec?.Serialize(serializedState)!;
+
+                    var h = $"{string.Join(" ", stateBuf.Select(x => $"{x:X2}"))}";
+
                     var result = (await Duplexer.DuplexAndSyncAsync(new Parse
                     {
                         Capabilities = capabilities,
@@ -219,7 +223,7 @@ namespace EdgeDB
                         ExpectedCardinality = cardinality ?? Cardinality.Many,
                         ExplicitObjectIds = _config.ExplicitObjectIds,
                         StateTypeDescriptorId = _stateDescriptorId,
-                        StateData = _stateCodec?.Serialize(serializedState),
+                        StateData = stateBuf,
                         ImplicitTypeNames = true, // used for type builder
                         ImplicitTypeIds = true,  // used for type builder
                     }, parseHandlerPredicate, alwaysReturnError: false).ConfigureAwait(false));

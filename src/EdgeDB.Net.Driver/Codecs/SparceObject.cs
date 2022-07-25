@@ -78,11 +78,17 @@ namespace EdgeDB.Codecs
 
                 writer.Write(index);
 
-                using var subWriter = new PacketWriter();
-                var codec = _innerCodecs[index];
-                codec.Serialize(subWriter, element.Value);
-                writer.Write(subWriter.Length);
-                writer.Write(subWriter);
+                if (element.Value == null)
+                    writer.Write(-1);
+                else
+                {
+                    using var subWriter = new PacketWriter();
+                    var codec = _innerCodecs[index];
+                    codec.Serialize(subWriter, element.Value);
+                    writer.Write((int)subWriter.Length);
+                    writer.Write(subWriter);
+                }
+                
             }
         }
     }

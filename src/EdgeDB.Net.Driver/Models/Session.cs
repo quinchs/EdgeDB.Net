@@ -46,7 +46,13 @@ namespace EdgeDB.State
                 dict["config"] = serializedConfig;
 
             if(_globals.Any())
-                dict["globals"] = Globals;
+            {
+                dict["globals"] = Globals.Select(x => 
+                    x.Key.Contains("::") 
+                        ? (x.Key, x.Value)
+                        : ($"{Module}::{x.Key}", x.Value) 
+                    ).ToDictionary(x => x.Item1, x => x.Value);
+            }
             
             return dict;
         }
@@ -68,6 +74,15 @@ namespace EdgeDB.State
             _config = config;
             return this;
         }
+
+        internal Session Clone()
+            => new()
+            {
+                Aliases = Aliases,
+                Config = Config.Clone(),
+                Globals = Globals,
+                Module = Module
+            };
 
         public static Session Default
             => new();
