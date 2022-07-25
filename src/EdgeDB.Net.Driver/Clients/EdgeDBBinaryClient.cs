@@ -21,7 +21,14 @@ namespace EdgeDB
     /// </summary>
     public abstract class EdgeDBBinaryClient : BaseEdgeDBClient, ITransactibleClient
     {
+        /// <summary>
+        ///     The major version of the protocol that this client supports.
+        /// </summary>
         public const int PROTOCOL_MAJOR_VERSION = 1;
+
+        /// <summary>
+        ///     The minor version of the protocol that this client supports.
+        /// </summary>
         public const int PROTOCOL_MINOR_VERSION = 0;
 
         #region Events
