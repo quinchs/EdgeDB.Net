@@ -28,7 +28,11 @@ namespace EdgeDB
             return attr != null ? $"{(attr.ModuleName != null ? $"{attr.ModuleName}::" : "")}{name}" : name;
         }
         public static string GetEdgeDBPropertyName(this MemberInfo info)
-            => info.GetCustomAttribute<EdgeDBPropertyAttribute>()?.Name ?? TypeBuilder.NamingStrategy.GetName(info);
+        {
+            var att = info.GetCustomAttribute<EdgeDBPropertyAttribute>();
+
+            return $"{((att?.IsLinkProperty ?? false) ? "@" : "")}{att?.Name ?? TypeBuilder.NamingStrategy.GetName(info)}";
+        }
 
         public static Type GetMemberType(this MemberInfo info)
         {

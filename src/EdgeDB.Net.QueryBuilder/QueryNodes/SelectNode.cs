@@ -18,7 +18,7 @@ namespace EdgeDB.QueryNodes
         /// <summary>
         ///     The max recursion depth for generating default shapes.
         /// </summary>
-        public const int MAX_DEPTH = 1;
+        public const int MAX_DEPTH = 2;
 
         /// <inheritdoc/>
         public SelectNode(NodeBuilder builder) : base(builder) { }
@@ -50,7 +50,7 @@ namespace EdgeDB.QueryNodes
                 }
                 else // return just the name
                     return name;
-            }).Where(x => x != null);
+            }).Where(x => x is not null);
 
             // join our properties by commas and wrap it in braces
             return $"{{ {string.Join(", ", propertyNames)} }}";

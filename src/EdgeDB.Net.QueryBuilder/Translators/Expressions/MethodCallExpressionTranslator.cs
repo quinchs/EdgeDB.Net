@@ -23,7 +23,7 @@ namespace EdgeDB.Translators.Expressions
                 return TranslateToEdgeQL(expression, context);
 
             // invoke and translate the result
-            var result = Expression.Lambda(expression).Compile().DynamicInvoke();
+            var result = Expression.Lambda(expression, context.RootExpression.Parameters).Compile().DynamicInvoke();
 
             // attempt to get the scalar type of the result of the method.
             if (!QueryUtils.TryGetScalarType(expression.Type, out var type))
@@ -41,8 +41,10 @@ namespace EdgeDB.Translators.Expressions
                 : DisassembleInstance(expression.Object).ToArray();
             
             var isInstanceReferenceToContext = expression.Object?.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(x => disassembledInstance.Contains(x));
-            var isParameterReferenceToContext = expression.Arguments.Any(x => x.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(y => y == x));
-            return isParameterReferenceToContext || isInstanceReferenceToContext;
+            var isParameterReferenceToContext = expression.Arguments.Any(x => x.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(y => DisassembleInstance(x).Contains(y)));
+            var isExplicitTranslatorMethod = expression.Method.GetCustomAttribute<EquivalentOperator>() is not null;
+            var isStdLib = expression.Method.DeclaringType == typeof(EdgeQL);
+            return isStdLib || isExplicitTranslatorMethod || isParameterReferenceToContext || isInstanceReferenceToContext;
         }
 
         private IEnumerable<Expression> DisassembleInstance(Expression expression)
