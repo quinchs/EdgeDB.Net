@@ -456,7 +456,8 @@ namespace EdgeDB.Serializer
         public object Deserialize(IDictionary<string, object?> args)
         {
             var result = _factory(args);
-            TypeBuilder.DispatchObjectCreate(result, (Guid)args["id"]!);
+            if (args.TryGetValue("id", out var rawGuid))
+                TypeBuilder.DispatchObjectCreate(result, (Guid)rawGuid!);
             return result;
         }
 

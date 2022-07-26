@@ -322,7 +322,6 @@ namespace EdgeDB.QueryNodes
                 // get the equivalent edgedb property name
                 var propertyName = property.GetEdgeDBPropertyName();
                 
-
                 // if a scalar type is found for the property type
                 if(QueryUtils.TryGetScalarType(propType, out var edgeqlType))
                 {

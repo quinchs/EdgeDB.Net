@@ -17,6 +17,53 @@ namespace EdgeDB.Translators.Expressions
     {
         public override string? Translate(MethodCallExpression expression, ExpressionContext context)
         {
+            // figure out if the method is something we should translate or somthing that we should
+            // call to pull the result from.
+            if(ShouldTranslate(expression, context))
+                return TranslateToEdgeQL(expression, context);
+
+            // invoke and translate the result
+            var result = Expression.Lambda(expression).Compile().DynamicInvoke();
+
+            // attempt to get the scalar type of the result of the method.
+            if (!QueryUtils.TryGetScalarType(expression.Type, out var type))
+                throw new InvalidOperationException($"Cannot use {expression.Type} as a result in an un-translated context");
+
+            // return the variable name containing the result of the method.
+            return $"<{type}>{context.AddVariable(result)}";
+        }
+
+        private bool ShouldTranslate(MethodCallExpression expression, ExpressionContext context)
+        {
+            // if the method references context or a parameter to our current root lambda
+            var disassembledInstance = expression.Object is null 
+                ? Array.Empty<Expression> ()
+                : DisassembleInstance(expression.Object).ToArray();
+            
+            var isInstanceReferenceToContext = expression.Object?.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(x => disassembledInstance.Contains(x));
+            var isParameterReferenceToContext = expression.Arguments.Any(x => x.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(y => y == x));
+            return isParameterReferenceToContext || isInstanceReferenceToContext;
+        }
+
+        private IEnumerable<Expression> DisassembleInstance(Expression expression)
+        {
+            yield return expression;
+
+            var temp = expression;
+            while(temp is MemberExpression memberExpression)
+            {
+                if (memberExpression.Expression is not null)
+                {
+                    yield return memberExpression.Expression;
+                    temp = memberExpression.Expression;
+                }
+                else
+                    break;
+            }
+        }
+
+        private string? TranslateToEdgeQL(MethodCallExpression expression, ExpressionContext context)
+        {
             // if our method is within the query context class
             if (expression.Method.DeclaringType == typeof(QueryContext))
             {
@@ -72,16 +119,16 @@ namespace EdgeDB.Translators.Expressions
                             // depending on the backlink method called, we should set some flags:
                             // whether or not the called function is using the string form or the lambda form
                             var isRawPropertyName = expression.Arguments[0].Type == typeof(string);
-                            
+
                             // whether or not a shape argument was supplied
                             var hasShape = !isRawPropertyName && expression.Arguments.Count > 1;
 
                             // translate the backlink property accessor
                             var property = TranslateExpression(expression.Arguments[0],
                                 isRawPropertyName
-                                    ? context.Enter(x => x.StringWithoutQuotes = true) 
+                                    ? context.Enter(x => x.StringWithoutQuotes = true)
                                     : context.Enter(x => x.IncludeSelfReference = false));
-                            
+
                             var backlink = $".<{property}";
 
                             // if its a lambda, add the corresponding generic type as a [is x] statement
@@ -103,7 +150,7 @@ namespace EdgeDB.Translators.Expressions
                             // build it and copy its globals & parameters to our builder
                             var result = builder.BuildWithGlobals();
 
-                            if(result.Parameters is not null)
+                            if (result.Parameters is not null)
                                 foreach (var parameter in result.Parameters)
                                     context.SetVariable(parameter.Key, parameter.Value);
 
