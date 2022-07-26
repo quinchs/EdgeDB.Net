@@ -318,31 +318,26 @@ namespace EdgeDB.Serializer
             if (_type.GetCustomAttribute<CompilerGeneratedAttribute>() != null)
             {
                 var props = _type.GetProperties();
-
                 return (data) =>
                 {
                     object?[] ctorParams = new object[props.Length];
-
                     for (int i = 0; i != ctorParams.Length; i++)
                     {
                         var prop = props[i];
-                        
-                        if(!data.TryGetValue(TypeBuilder.NamingStrategy.GetName(prop), out var value))
+
+                        if (!data.TryGetValue(TypeBuilder.NamingStrategy.GetName(prop), out var value))
                         {
                             ctorParams[i] = ReflectionUtils.GetDefault(prop.PropertyType);
                         }
-
                         var valueType = value?.GetType();
-
                         if (valueType == null)
                         {
                             ctorParams[i] = ReflectionUtils.GetDefault(prop.PropertyType);
                             continue;
                         }
-
                         if (valueType.IsAssignableTo(prop.PropertyType))
                         {
-                            ctorParams[i] = value; 
+                            ctorParams[i] = value;
                         }
                         else if (prop.PropertyType.IsEnum && value is string str) // enums
                         {
@@ -355,7 +350,6 @@ namespace EdgeDB.Serializer
                         else
                             throw new InvalidOperationException($"Cannot assign property {prop.Name} with type {valueType}");
                     }
-
                     return Activator.CreateInstance(_type, ctorParams)!;
                 };
             }

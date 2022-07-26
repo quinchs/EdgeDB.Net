@@ -1,4 +1,7 @@
-﻿namespace EdgeDB
+﻿using EdgeDB.DataTypes;
+using EdgeDB.State;
+
+namespace EdgeDB
 {
     /// <summary>
     ///     Represents a base edgedb client that can interaction with the EdgeDB database.
@@ -15,6 +18,11 @@
         ///     Gets the client id of this client.
         /// </summary>
         public ulong ClientId { get; }
+
+        /// <summary>
+        ///     Gets the clients session.
+        /// </summary>
+        public Session Session { get; protected set; }
 
         internal event Func<BaseEdgeDBClient, ValueTask<bool>> OnDisposed
         {
@@ -46,9 +54,93 @@
         /// <param name="clientId">The id of this client.</param>
         public BaseEdgeDBClient(ulong clientId)
         {
+            Session = Session.Default;
             ClientId = clientId;
         }
 
+        #region State
+        public BaseEdgeDBClient WithSession(Session session)
+        {
+            Session = session;
+            return this;
+        }
+
+        public BaseEdgeDBClient WithModuleAliases(IDictionary<string, string> aliases)
+        {
+            Session.WithModuleAliases(aliases);
+            return this;
+        }
+
+        public BaseEdgeDBClient WithConfig(Config config)
+        {
+            Session.WithConfig(config);
+            return this;
+        }
+
+        public BaseEdgeDBClient WithGlobals(IDictionary<string, object?> globals)
+        {
+            Session.WithGlobals(globals);
+            return this;
+        }
+        #endregion
+
+        #region Connect/Disconnect
+        /// <summary>
+        ///     Connects this client to the database.
+        /// </summary>
+        /// <remarks>
+        ///     When overridden, it's <b>strongly</b> recommended to call base.ConnectAsync
+        ///     to ensure the client pool adds this client.
+        /// </remarks>
+        /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
+        /// <returns>
+        ///     A ValueTask representing the asynchronous connect operation.
+        /// </returns>
+        public virtual ValueTask ConnectAsync(CancellationToken token = default)
+            => OnConnectInternal.InvokeAsync(this);
+
+        /// <summary>
+        ///     Disconnects this client from the database.
+        /// </summary>
+        /// <remarks>
+        ///     When overridden, it's <b>strongly</b> recommended to call base.DisconnectAsync
+        ///     to ensure the client pool removes this client.
+        /// </remarks>
+        /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
+        /// <returns>
+        ///     A ValueTask representing the asynchronous disconnect operation.
+        /// </returns>
+        public virtual ValueTask DisconnectAsync(CancellationToken token = default)
+            => OnDisconnectInternal.InvokeAsync(this);
+        #endregion
+
+        #region Query methods
+        /// <inheritdoc/>
+        public abstract Task ExecuteAsync(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
+
+        /// <inheritdoc/>
+        public abstract Task<IReadOnlyCollection<TResult?>> QueryAsync<TResult>(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
+
+        /// <inheritdoc/>
+        public abstract Task<TResult> QueryRequiredSingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
+
+        /// <inheritdoc/>
+        public abstract Task<TResult?> QuerySingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
+        
+        /// <inheritdoc/>
+        public abstract Task<Json> QueryJsonAsync(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
+        
+        /// <inheritdoc/>
+        public abstract Task<IReadOnlyCollection<Json>> QueryJsonElementsAsync(string query, IDictionary<string, object?>? args = null,
+            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
+        #endregion
+
+        #region Dispose
         /// <summary>
         ///     Disposes or releases this client to the client pool
         /// </summary>
@@ -73,99 +165,12 @@
             return shouldDispose;
         }
 
-        /// <summary>
-        ///     Disconnects this client from the database.
-        /// </summary>
-        /// <remarks>
-        ///     When overridden, it's <b>strongly</b> recommended to call base.DisconnectAsync
-        ///     to ensure the client pool removes this client.
-        /// </remarks>
-        /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
-        /// <returns>
-        ///     A ValueTask representing the asynchronous disconnect operation.
-        /// </returns>
-        public virtual ValueTask DisconnectAsync(CancellationToken token = default)
-            => OnDisconnectInternal.InvokeAsync(this);
-
-        /// <summary>
-        ///     Connects this client to the database.
-        /// </summary>
-        /// <remarks>
-        ///     When overridden, it's <b>strongly</b> recommended to call base.ConnectAsync
-        ///     to ensure the client pool adds this client.
-        /// </remarks>
-        /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
-        /// <returns>
-        ///     A ValueTask representing the asynchronous connect operation.
-        /// </returns>
-        public virtual ValueTask ConnectAsync(CancellationToken token = default)
-            => OnConnectInternal.InvokeAsync(this);
-
-        /// <summary>
-        ///     Executes a given query, ignoring any returned data.
-        /// </summary>
-        /// <param name="query">The query to execute.</param>
-        /// <param name="args">Optional collection of arguments within the query.</param>
-        /// <param name="capabilities">The allowed capabilities for the query.</param>
-        /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
-        /// <returns>
-        ///     A task that represents the asynchronous execution operation.
-        /// </returns>
-        public abstract Task ExecuteAsync(string query, IDictionary<string, object?>? args = null, 
-            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
-
-        /// <summary>
-        ///     Executes a given query and returns its results.
-        /// </summary>
-        /// <typeparam name="TResult">The return type of the query.</typeparam>
-        /// <param name="query">The query to execute.</param>
-        /// <param name="args">Optional collection of arguments within the query.</param>
-        /// <param name="capabilities">The allowed capabilities for the query.</param>
-        /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
-        /// <returns>
-        ///      A task that represents the asynchronous execution operation; the tasks result 
-        ///      is a <see cref="IReadOnlyCollection{T}"/> containing the 
-        ///      <typeparamref name="TResult"/>(s) returned in the query.
-        /// </returns>
-        public abstract Task<IReadOnlyCollection<TResult?>> QueryAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
-
-        /// <summary>
-        ///     Executes a given query and returns the result.
-        /// </summary>
-        /// <typeparam name="TResult">The return type of the query.</typeparam>
-        /// <param name="query">The query to execute.</param>
-        /// <param name="args">Optional collection of arguments within the query.</param>
-        /// <param name="capabilities">The allowed capabilities for the query.</param>
-        /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
-        /// <returns>
-        ///      A task that represents the asynchronous execution operation; the tasks result 
-        ///      is an instance of <typeparamref name="TResult"/>.
-        /// </returns>
-        public abstract Task<TResult> QueryRequiredSingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
-
-        /// <summary>
-        ///     Executes a given query and returns the result; or <see langword="null"/> 
-        ///     if there was no result.
-        /// </summary>
-        /// <typeparam name="TResult">The return type of the query.</typeparam>
-        /// <param name="query">The query to execute.</param>
-        /// <param name="args">Optional collection of arguments within the query.</param>
-        /// <param name="capabilities">The allowed capabilities for the query.</param>
-        /// <param name="token">A cancellation token used to cancel the asynchronous operation.</param>
-        /// <returns>
-        ///      A task that represents the asynchronous execution operation; the tasks result 
-        ///      is an instance of <typeparamref name="TResult"/>.
-        /// </returns>
-        public abstract Task<TResult?> QuerySingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
-            Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default);
-
         /// <inheritdoc/>
         async ValueTask IAsyncDisposable.DisposeAsync()
         {
             GC.SuppressFinalize(this);
             await DisposeAsync().ConfigureAwait(false);
         }
+        #endregion
     }
 }

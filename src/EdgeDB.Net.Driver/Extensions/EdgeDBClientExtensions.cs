@@ -7,62 +7,6 @@ namespace EdgeDB
 {
     public static class EdgeDBClientExtensions
     {
-        #region JsonResults
-        /// <summary>
-        ///     Executes a given query and returns the result as a single json string.
-        /// </summary>
-        /// <param name="client">The client on which to preform the query on.</param>
-        /// <param name="query">The query to execute.</param>
-        /// <param name="args">Optional collection of arguments within the query.</param>
-        /// <param name="capabilities">The allowed capabilities for the query.</param>
-        /// <returns>
-        ///     A task representing the asynchronous query operation. The tasks result is 
-        ///     the json result of the query.
-        /// </returns>
-        /// <exception cref="ResultCardinalityMismatchException">The query returned more than 1 datapoint.</exception>
-        public static async Task<string> QueryJsonAsync(this EdgeDBBinaryClient client, 
-            string query, IDictionary<string, object?>? args = null, 
-            Capabilities capabilities = Capabilities.Modifications)
-        {
-            var result = await client.ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, format: IOFormat.Json).ConfigureAwait(false);
-
-            if(result.Data.Count >= 2)
-            {
-                throw new ResultCardinalityMismatchException(Cardinality.AtMostOne, Cardinality.Many);
-            }
-            
-            return result.Data.Count == 1
-                ? (string)result.Deserializer.Deserialize(result.Data[0].PayloadBuffer)!
-                : "[]";
-        }
-
-        /// <summary>
-        ///     Executes a given query and returns the result as an array of json objects.
-        /// </summary>
-        /// <param name="client">The client on which to preform the query on.</param>
-        /// <param name="query">The query to execute.</param>
-        /// <param name="args">Optional collection of arguments within the query.</param>
-        /// <param name="capabilities">The allowed capabilities for the query.</param>
-        /// <returns>
-        ///     A task representing the asynchronous query operation. The tasks result is 
-        ///     the json result of the query.
-        /// </returns>
-        public static async Task<string[]> QueryJsonElementsAsync(this EdgeDBBinaryClient client,
-            string query, IDictionary<string, object?>? args = null,
-            Capabilities capabilities = Capabilities.Modifications)
-        {
-            var result = await client.ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, format: IOFormat.JsonElements).ConfigureAwait(false);
-
-            string[] elements = new string[result.Data.Count];
-
-            for (int i = 0; i != elements.Length; i++)
-                elements[i] = (string)result.Deserializer.Deserialize(result.Data[i].PayloadBuffer)!;
-
-            return elements;
-        }
-
-        #endregion
-
         #region Transactions
         /// <summary>
         ///     Creates a transaction and executes a callback with the transaction object.
@@ -189,7 +133,7 @@ namespace EdgeDB
                 {
                     switch (msg)
                     {
-                        case CommandComplete:
+                        case ReadyForCommand:
                             tcs.TrySetResult();
                             break;
                         case DumpBlock block:
@@ -208,7 +152,7 @@ namespace EdgeDB
 
                 client.Duplexer.OnMessage += handler;
 
-                var dump = await client.Duplexer.DuplexAndSyncAsync(new Dump(), x => x.Type == ServerMessageType.DumpHeader, token);
+                var dump = await client.Duplexer.DuplexAndSyncAsync(new Dump(), x => x.Type == ServerMessageType.DumpHeader, token: token);
 
                 if (dump is ErrorResponse err)
                 {
@@ -262,7 +206,7 @@ namespace EdgeDB
 
             var packets = DumpReader.ReadDatabaseDump(stream);
 
-            var result = await client.Duplexer.DuplexAsync(x => x.Type == ServerMessageType.RestoreReady, token, packets.Restore).ConfigureAwait(false);
+            var result = await client.Duplexer.DuplexAsync(x => x.Type == ServerMessageType.RestoreReady, true, token, packets.Restore).ConfigureAwait(false);
 
             if (result is ErrorResponse err)
                 throw new EdgeDBErrorException(err);
@@ -275,7 +219,7 @@ namespace EdgeDB
                 await client.Duplexer.SendAsync(block, token).ConfigureAwait(false);
             }
 
-            result = await client.Duplexer.DuplexAsync(x => x.Type == ServerMessageType.CommandComplete, token, new RestoreEOF()).ConfigureAwait(false);
+            result = await client.Duplexer.DuplexAsync(x => x.Type == ServerMessageType.CommandComplete, true, token, new RestoreEOF()).ConfigureAwait(false);
 
             return result is ErrorResponse error
                 ? throw new EdgeDBErrorException(error)

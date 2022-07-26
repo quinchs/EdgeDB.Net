@@ -78,7 +78,6 @@
                     _innerCodec.Serialize(subWriter, element);
                     elementWriter.Write((int)subWriter.Length);
                     elementWriter.Write(subWriter);
-                    
                 }
             }
 
