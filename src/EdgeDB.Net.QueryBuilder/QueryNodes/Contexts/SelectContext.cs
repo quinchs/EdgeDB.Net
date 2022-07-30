@@ -27,6 +27,8 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         public bool IsFreeObject { get; init; }
 
+        public bool IncludeShape { get; set; } = true;
+
         public SelectContext(Type currentType) : base(currentType)
         {
         }

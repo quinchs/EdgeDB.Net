@@ -173,7 +173,7 @@ namespace EdgeDB
         /// <returns>
         ///     A <see cref="BuiltQuery"/> which is the current query this builder has constructed.
         /// </returns>
-        internal BuiltQuery InternalBuild(bool includeGlobalsInQuery = true)
+        internal BuiltQuery InternalBuild(bool includeGlobalsInQuery = true, Action<QueryNode>? preFinalizerModifier = null)
         {
             List<string> query = new();
             List<IDictionary<string, object?>> parameters = new();
@@ -184,6 +184,8 @@ namespace EdgeDB
             foreach (var node in nodes)
             {
                 node.SchemaInfo ??= _schemaInfo;
+                if (preFinalizerModifier is not null)
+                    preFinalizerModifier(node);
                 node.FinalizeQuery();
             }
 
@@ -250,8 +252,8 @@ namespace EdgeDB
             => IntrospectAndBuildAsync(edgedb, token);
 
         /// <inheritdoc cref="IQueryBuilder.BuildWithGlobals"/>
-        internal BuiltQuery BuildWithGlobals()
-            => InternalBuild(false);
+        internal BuiltQuery BuildWithGlobals(Action<QueryNode>? preFinalizerModifier = null)
+            => InternalBuild(false, preFinalizerModifier);
 
         #region Root nodes
         public IMultiCardinalityExecutable<TType> For(IEnumerable<TType> collection, Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator)
@@ -746,7 +748,7 @@ namespace EdgeDB
         IReadOnlyCollection<QueryGlobal> IQueryBuilder.Globals => _queryGlobals;
         IReadOnlyDictionary<string, object?> IQueryBuilder.Variables => _queryVariables;
         IQueryBuilder<TType> IQueryBuilder<TType>.With(string name, object? value) => With(name, value);
-        BuiltQuery IQueryBuilder.BuildWithGlobals() => BuildWithGlobals();
+        BuiltQuery IQueryBuilder.BuildWithGlobals(Action<QueryNode>? preFinalizerModifier) => BuildWithGlobals(preFinalizerModifier);
         #endregion
     }
 
@@ -904,10 +906,13 @@ namespace EdgeDB
         ///     form and exlcudes globals from the query text and puts them in 
         ///     <see cref="BuiltQuery.Globals"/>.
         /// </summary>
+        /// <param name="preFinalizerModifier">
+        ///     A modifier delegate to change nodes behaviour before the finalizer is called.
+        /// </param>
         /// <returns>
         ///     A <see cref="BuiltQuery"/> which is the current query this builder has constructed.
         /// </returns>
-        internal BuiltQuery BuildWithGlobals();
+        internal BuiltQuery BuildWithGlobals(Action<QueryNode>? preFinalizerModifier = null);
     }
 
     /// <summary>

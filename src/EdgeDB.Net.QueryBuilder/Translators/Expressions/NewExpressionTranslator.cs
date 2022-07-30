@@ -27,19 +27,18 @@ namespace EdgeDB.Translators.Expressions
                 var arg = expression.Arguments[i];
                 var edgedbName = member.GetEdgeDBPropertyName();
 
-                // special fallthru for include
-                if(arg is MethodCallExpression mcex && mcex.Method.DeclaringType == typeof(QueryContext) && mcex.Method.Name == "Include")
-                {
-                    shape[i] = edgedbName;
-                    continue;
-                }
-               
                 // translate the value and determine if were setting a value or referencing a value.
-                string? value = TranslateExpression(arg, context.Enter(x => x.LocalScope = expression.Type));
+                var newContext = context.Enter(x => x.LocalScope = expression.Type);
+                string? value = TranslateExpression(arg, newContext);
                 bool isSetter = context.NodeContext.CurrentType.GetProperty(member.Name) == null || arg is MethodCallExpression;
 
                 // add it to our shape
-                shape[i] = $"{edgedbName}{(isSetter || context.IsFreeObject ? " :=" : "")} {value}";
+                if (value is null) // include
+                    shape[i] = edgedbName;
+                else if (newContext.IsShape) // includelink
+                    shape[i] = $"{edgedbName}: {{ {value} }}";
+                else
+                    shape[i] = $"{edgedbName}{(isSetter || context.IsFreeObject ? " :=" : "")} {value}";
             }
             
             // return our shape joined by commas

@@ -63,7 +63,6 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         internal List<QueryNode> SubNodes { get; } = new();
 
-
         /// <summary>
         ///     Gets the query string for this node.
         /// </summary>
@@ -81,6 +80,9 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         internal readonly NodeBuilder Builder;
 
+        /// <summary>
+        ///     The operating type within the context of the query builder.
+        /// </summary>
         protected readonly Type OperatingType;
 
         /// <summary>
@@ -149,6 +151,9 @@ namespace EdgeDB.QueryNodes
             return name;
         }
 
+        /// <summary>
+        ///     Gets the current operating type in the context of the query builder.
+        /// </summary>
         protected Type GetOperatingType()
             => Context.CurrentType.IsAssignableTo(typeof(IJsonVariable))
                 ? Context.CurrentType.GenericTypeArguments[0]

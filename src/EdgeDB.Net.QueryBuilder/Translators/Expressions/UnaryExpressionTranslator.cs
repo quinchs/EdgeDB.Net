@@ -30,6 +30,11 @@ namespace EdgeDB.Translators.Expressions
                         if (value is null)
                             return null; // nullable converters for include, ex Guid? -> Guid
 
+                        // this is a selector-based expression converting value types to objects, for
+                        // this case we can just return the value
+                        if (expression.Type == typeof(object))
+                            return value;
+
                         // dotnet nullable check
                         if (ReflectionUtils.IsSubTypeOfGenericType(typeof(Nullable<>), expression.Type) && 
                             expression.Type.GenericTypeArguments[0] == expression.Operand.Type)

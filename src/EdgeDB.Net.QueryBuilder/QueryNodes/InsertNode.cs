@@ -263,7 +263,7 @@ namespace EdgeDB.QueryNodes
             SetVariable(jsonValue.VariableName, new Json(JsonConvert.SerializeObject(depthMap[0].Select(x => x.Node))));
 
             // create the base insert shape
-            var shape = jsonValue.InnerType.GetEdgeDBTargetProperties().Select(x =>
+            var shape = jsonValue.InnerType.GetEdgeDBTargetProperties(excludeId: true).Select(x =>
             {
                 var edgedbName = x.GetEdgeDBPropertyName();
 
@@ -311,7 +311,7 @@ namespace EdgeDB.QueryNodes
                 return $"{{ {ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context, Builder.QueryGlobals)} }}";
 
             // get all properties that aren't marked with the EdgeDBIgnore attribute
-            var properties = type.GetEdgeDBTargetProperties();
+            var properties = type.GetEdgeDBTargetProperties(excludeId: true);
 
             foreach(var property in properties)
             {

@@ -20,6 +20,7 @@ namespace EdgeDB.ExampleApp.Examples
 
         public class LinkPerson
         {
+            public Guid Id { get; set; }
             public string? Name { get; set; }
             public string? Email { get; set; }
             public LinkPerson? BestFriend { get; set; }
@@ -27,6 +28,7 @@ namespace EdgeDB.ExampleApp.Examples
 
         public class MultiLinkPerson
         {
+            public Guid Id { get; set; }
             public string? Name { get; set; }
             public string? Email { get; set; }
             public MultiLinkPerson[]? BestFriends { get; set; }
@@ -54,7 +56,7 @@ namespace EdgeDB.ExampleApp.Examples
             query = QueryBuilder
                 .Select<LinkPerson>()
                 .Filter(x => EdgeQL.ILike(x.Name, "e%"))
-                .OrderBy(x => x.Name)
+                .OrderByDesending(x => x.Name)
                 .Offset(2)
                 .Limit(10)
                 .Build()
@@ -176,9 +178,9 @@ namespace EdgeDB.ExampleApp.Examples
                 }
             };
 
-            query = (await QueryBuilder.For(data,
+            var tquery = (await QueryBuilder.For(data,
                     x => QueryBuilder.Insert(x, false)
-                ).BuildAsync(client)).Prettify();
+                ).BuildAsync(client));
 
             // Else statements (upsert demo)
             query = (await QueryBuilder
@@ -187,7 +189,7 @@ namespace EdgeDB.ExampleApp.Examples
                 .Else(q =>
                     q.Update(old => new LinkPerson
                     {
-                        Name = old.Name.ToLower()
+                        Name = old!.Name!.ToLower()
                     })
                 )
                 .BuildAsync(client))

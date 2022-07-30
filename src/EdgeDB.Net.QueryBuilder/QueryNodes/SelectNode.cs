@@ -80,8 +80,18 @@ namespace EdgeDB.QueryNodes
             return $"{{ {ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context, Builder.QueryGlobals)} }}";
         }
 
-        public override void Visit()
+        /// <inheritdoc/>
+        public override void Visit() { }
+
+        /// <inheritdoc/>
+        public override void FinalizeQuery()
         {
+            if(!Context.IncludeShape)
+            {
+                Query.Insert(0, $"select {Context.SelectName ?? OperatingType.GetEdgeDBTypeName()}");
+                return;
+            }    
+
             // if our shape is 'new {...}' or null then parse the shape
             if (Context.Shape?.Body is NewExpression or MemberInitExpression || Context.Shape is null)
             {

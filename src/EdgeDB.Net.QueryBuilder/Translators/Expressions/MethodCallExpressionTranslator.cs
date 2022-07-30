@@ -1,4 +1,5 @@
 ﻿using EdgeDB.Operators;
+using EdgeDB.QueryNodes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -191,7 +192,17 @@ namespace EdgeDB.Translators.Expressions
                         var builder = (IQueryBuilder)Expression.Lambda(arg).Compile().DynamicInvoke()!;
 
                         // build it and copy its parameters to our builder, globals shoudln't be added here
-                        var result = builder.BuildWithGlobals();
+                        var result = builder.BuildWithGlobals(node =>
+                        {
+                            // TODO: better checking on when shapes are required
+                            switch (node)
+                            {
+                                case SelectNode select:
+                                    select.Context.IncludeShape = false;
+                                    break;
+                            }
+                        });
+
                         if (result.Globals?.Any() ?? false)
                             throw new NotSupportedException("Cannot use queries with parameters or globals within a sub-query expression");
 
