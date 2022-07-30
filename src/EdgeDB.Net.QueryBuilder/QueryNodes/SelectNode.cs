@@ -98,14 +98,14 @@ namespace EdgeDB.QueryNodes
                 var shape = GetShape();
 
                 if (Context.IsFreeObject)
-                    Query.Append($"select {shape}");
+                    Query.Insert(0, $"select {shape}");
                 else
-                    Query.Append($"select {Context.SelectName ?? OperatingType.GetEdgeDBTypeName()} {shape}");
+                    Query.Insert(0, $"select {Context.SelectName ?? OperatingType.GetEdgeDBTypeName()} {shape}");
             }
             else
             {
                 // else we can just translate the shape and append it.
-                Query.Append($"select {ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context, Builder.QueryGlobals)}");
+                Query.Insert(0, $"select {ExpressionTranslator.Translate(Context.Shape, Builder.QueryVariables, Context, Builder.QueryGlobals)}");
             }
         }
 
