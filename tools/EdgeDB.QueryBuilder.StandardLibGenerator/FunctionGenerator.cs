@@ -28,7 +28,10 @@ namespace EdgeDB.QueryBuilder.StandardLibGenerator
 
                 foreach (var func in funcs)
                 {
-
+                    if(!TypeUtils.TryGetType(func.ReturnType.Name, out var _) && !func.ReturnType.Name.Contains("any"))
+                    {
+                        
+                    }
                 }
             }
         }

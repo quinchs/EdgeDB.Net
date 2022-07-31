@@ -2,24 +2,48 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace EdgeDB.QueryBuilder.StandardLibGenerator
 {
     public class TypeUtils
     {
-        public static Type GetType(string t)
+        private static Regex GenericRegex = new Regex(@"(.+?)<(.+?)>$");
+
+        public readonly struct TypeNode
         {
-            return t switch
+            public readonly string EdgeDBName;
+            public readonly Type? DotnetType;
+            public readonly bool IsGeneric;
+            public readonly TypeNode[] Children;
+
+            public TypeNode(string name, Type? dotnetType, bool isGeneric, params TypeNode[] children)
             {
-                "std::anytype" => typeof(object),
+                EdgeDBName = name;
+                DotnetType = dotnetType;
+                IsGeneric = isGeneric;
+                Children = children;
+            }
+
+            public override string ToString()
+            {
+                return $"{EdgeDBName} {DotnetType?.FullName} {IsGeneric} {string.Join(", ", Children)}";
+            }
+        }
+
+        public static bool TryGetType(string t, [MaybeNullWhen(false)] out TypeNode type)
+        {
+            type = default;
+            
+            var dotnetType = t switch
+            {
                 "std::set" => typeof(IEnumerable),
-                "std::anytuple" => typeof(ITuple),
-                "std::anyenum" => typeof(Enum),
                 "std::Object" => typeof(object),
                 "std::bool" => typeof(bool),
                 "std::bytes" => typeof(byte[]),
@@ -40,8 +64,38 @@ namespace EdgeDB.QueryBuilder.StandardLibGenerator
                 "std::decimal" => typeof(decimal),
                 "std::uuid" => typeof(Guid),
                 "std::json" => typeof(Json),
-                _ => throw new Exception($"Type {t} not found")
+                _ => null
             };
+
+            if (dotnetType is not null)
+                type = new(t, dotnetType, false);
+            else if (t.StartsWith("any"))
+                type = new(t, null, true);
+            else
+            {
+                // tuple or arry?
+                var match = GenericRegex.Match(t);
+
+                if (!match.Success)
+                    return false;
+
+                Type? wrapperType = match.Groups[1].Value switch
+                {
+                    "tuple" => typeof(ITuple),
+                    "array" => typeof(IEnumerable<>),
+                    "set" => typeof(IEnumerable<>),
+                    _ => null
+                };
+
+                var innerTypes = match.Groups[2].Value.Split(", ").Select(x => TryGetType(x, out var lt) ? lt : (TypeNode?)null);
+
+                if (wrapperType is null || innerTypes.Any(x => !x.HasValue))
+                    throw new Exception($"Type {t} not found");
+
+                type = new(t, wrapperType, false, innerTypes.Select(x => x!.Value).ToArray());
+            }
+
+            return true;
         }
     }
 }

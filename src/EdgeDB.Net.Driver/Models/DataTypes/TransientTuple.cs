@@ -81,7 +81,6 @@ namespace EdgeDB.DataTypes
                 return builder(types, values);
             }
             return builder(_types[offset..], _values[offset..]);
-
         }
 
         public object? this[int index] 
