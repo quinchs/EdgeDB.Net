@@ -38,7 +38,7 @@ namespace EdgeDB
             return ms.ToArray();
         }
 
-        public void Write(IEnumerable<Annotation>? headers)
+        public void Write(IEnumerable<KeyValue>? headers)
         {
             // write length
             Write((ushort)(headers?.Count() ?? 0));

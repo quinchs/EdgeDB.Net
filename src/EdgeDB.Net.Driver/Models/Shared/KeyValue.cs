@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace EdgeDB.Binary
 {
     /// <summary>
-    ///     Represents a dynamic header received in a <see cref="IReceiveable"/>.
+    ///     Represents a dynamic key-value pair received in a <see cref="IReceiveable"/>.
     /// </summary>
     public readonly struct KeyValue
     {
