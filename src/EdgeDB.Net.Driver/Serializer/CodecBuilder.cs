@@ -30,17 +30,17 @@ namespace EdgeDB
         private static readonly ConcurrentDictionary<ulong, (Guid InCodec, Guid OutCodec)> _codecKeyMap = new();
 
         public static ulong GetCacheHashKey(string query, Cardinality cardinality, IOFormat format)
-            => unchecked(CalculateKnuthHash(query)* (ulong) cardinality * (ulong) format);
+            => unchecked(CalculateKnuthHash(query) * (ulong)cardinality * (ulong)format);
 
-        
-        public static bool TryGetCodecs(ulong hash, 
-            [MaybeNullWhen(false)] out CodecInfo inCodecInfo, 
+
+        public static bool TryGetCodecs(ulong hash,
+            [MaybeNullWhen(false)] out CodecInfo inCodecInfo,
             [MaybeNullWhen(false)] out CodecInfo outCodecInfo)
         {
             inCodecInfo = null;
             outCodecInfo = null;
 
-            if(_codecKeyMap.TryGetValue(hash, out var codecIds)
+            if (_codecKeyMap.TryGetValue(hash, out var codecIds)
                 && _codecCache.TryGetValue(codecIds.InCodec, out var inCodec)
                 && _codecCache.TryGetValue(codecIds.OutCodec, out var outCodec))
             {
@@ -134,6 +134,13 @@ namespace EdgeDB
                             {
                                 var codecArguments = inputShape.Shapes.Select(x => codecs[x.TypePos]);
                                 codec = new Codecs.SparceObject(codecArguments.ToArray(), inputShape.Shapes);
+                                codecs.Add(codec);
+                            }
+                            break;
+                        case RangeTypeDescriptor rangeType:
+                            {
+                                var innerCodec = codecs[rangeType.TypePos];
+                                codec = (ICodec)Activator.CreateInstance(typeof(RangeCodec<>).MakeGenericType(innerCodec.ConverterType), innerCodec)!;
                                 codecs.Add(codec);
                             }
                             break;

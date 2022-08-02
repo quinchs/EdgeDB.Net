@@ -199,7 +199,7 @@ namespace EdgeDB
                                 {
                                     outCodecInfo = new(descriptor.OutputTypeDescriptorId,
                                         CodecBuilder.BuildCodec(descriptor.OutputTypeDescriptorId, descriptor.OutputTypeDescriptorBuffer));
-                                    
+
                                     inCodecInfo = new(descriptor.InputTypeDescriptorId,
                                         CodecBuilder.BuildCodec(descriptor.InputTypeDescriptorId, descriptor.InputTypeDescriptorBuffer));
 
@@ -236,6 +236,7 @@ namespace EdgeDB
                         ExplicitObjectIds = _config.ExplicitObjectIds,
                         StateTypeDescriptorId = _stateDescriptorId,
                         StateData = stateBuf,
+                        ImplicitLimit = _config.ImplicitLimit,
                         ImplicitTypeNames = true, // used for type builder
                         ImplicitTypeIds = true,  // used for type builder
                     }, parseHandlerPredicate, alwaysReturnError: false).ConfigureAwait(false));
@@ -285,7 +286,8 @@ namespace EdgeDB
                     StateData = _stateCodec?.Serialize(serializedState),
                     ImplicitTypeNames = true, // used for type builder
                     ImplicitTypeIds = true,  // used for type builder
-                    Arguments = argumentCodec?.SerializeArguments(args),
+                    Arguments = argumentCodec?.SerializeArguments(args) ,
+                    ImplicitLimit = _config.ImplicitLimit,
                     InputTypeDescriptorId = inCodecInfo.Id,
                     OutputTypeDescriptorId = outCodecInfo.Id,
                 }, handler, alwaysReturnError: false, token: linkedToken).ConfigureAwait(false);
