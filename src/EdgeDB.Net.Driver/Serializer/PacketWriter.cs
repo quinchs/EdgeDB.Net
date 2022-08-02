@@ -43,21 +43,6 @@ namespace EdgeDB
             // write length
             Write((ushort)(headers?.Count() ?? 0));
 
-            if(headers is not null)
-            {
-                foreach (var header in headers)
-                {
-                    Write(header.Code);
-                    WriteArray(header.Value);
-                }
-            }
-        }
-
-        public void Write(IEnumerable<Annotation>? headers)
-        {
-            // write length
-            Write((ushort)(headers?.Count() ?? 0));
-
             if (headers is not null)
             {
                 foreach (var header in headers)
@@ -74,7 +59,7 @@ namespace EdgeDB
             value.BaseStream.CopyTo(base.BaseStream);
         }
 
-        public void Write(Annotation header)
+        public void Write(KeyValue header)
         {
             Write(header.Code);
             Write(header.Value);

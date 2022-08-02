@@ -236,7 +236,6 @@ namespace EdgeDB
                         ExplicitObjectIds = _config.ExplicitObjectIds,
                         StateTypeDescriptorId = _stateDescriptorId,
                         StateData = stateBuf,
-                        ImplicitLimit = _config.ImplicitLimit,
                         ImplicitTypeNames = true, // used for type builder
                         ImplicitTypeIds = true,  // used for type builder
                     }, parseHandlerPredicate, alwaysReturnError: false).ConfigureAwait(false));
@@ -287,7 +286,6 @@ namespace EdgeDB
                     ImplicitTypeNames = true, // used for type builder
                     ImplicitTypeIds = true,  // used for type builder
                     Arguments = argumentCodec?.SerializeArguments(args) ,
-                    ImplicitLimit = _config.ImplicitLimit,
                     InputTypeDescriptorId = inCodecInfo.Id,
                     OutputTypeDescriptorId = outCodecInfo.Id,
                 }, handler, alwaysReturnError: false, token: linkedToken).ConfigureAwait(false);
