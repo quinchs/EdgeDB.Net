@@ -1,7 +1,7 @@
-﻿using EdgeDB.QueryBuilder.StandardLibGenerator.Models;
+﻿using EdgeDB.StandardLibGenerator.Models;
 using System.Linq.Expressions;
 
-namespace EdgeDB.QueryBuilder.StandardLibGenerator
+namespace EdgeDB.StandardLibGenerator
 {
     internal class OperatorGenerator
     {

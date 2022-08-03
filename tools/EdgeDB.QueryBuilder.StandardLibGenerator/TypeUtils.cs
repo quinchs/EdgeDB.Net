@@ -10,32 +10,61 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace EdgeDB.QueryBuilder.StandardLibGenerator
+namespace EdgeDB.StandardLibGenerator
 {
+    public readonly struct TypeNode
+    {
+        public readonly string EdgeDBName;
+        public readonly Type? DotnetType;
+        public readonly bool IsGeneric;
+        public readonly TypeNode[] Children;
+
+        public readonly string? TupleElementName;
+        public readonly bool IsChildOfNamedTuple;
+
+        public readonly bool RequiresGeneration;
+
+        public TypeNode(string name, Type? dotnetType, bool isGeneric, params TypeNode[] children)
+        {
+            EdgeDBName = name;
+            DotnetType = dotnetType;
+            IsGeneric = isGeneric;
+            Children = children;
+            IsChildOfNamedTuple = false;
+            TupleElementName = null;
+            RequiresGeneration = false;
+        }
+        public TypeNode(string name, Type? dotnetType, string tupleName, bool isGeneric, params TypeNode[] children)
+        {
+            EdgeDBName = name;
+            DotnetType = dotnetType;
+            IsGeneric = isGeneric;
+            Children = children;
+            IsChildOfNamedTuple = true;
+            TupleElementName = tupleName;
+            RequiresGeneration = false;
+        }
+        public TypeNode(string name, string? tupleName)
+        {
+            EdgeDBName = name;
+            RequiresGeneration = true;
+            DotnetType = null;
+            IsGeneric = false;
+            Children = Array.Empty<TypeNode>();
+            IsChildOfNamedTuple = tupleName is not null;
+            TupleElementName = tupleName;
+        }
+
+        public override string ToString()
+        {
+            return $"{EdgeDBName} {DotnetType?.FullName} {IsGeneric} {string.Join(", ", Children)}";
+        }
+    }
+
     public class TypeUtils
     {
-        private static Regex GenericRegex = new Regex(@"(.+?)<(.+?)>$");
-
-        public readonly struct TypeNode
-        {
-            public readonly string EdgeDBName;
-            public readonly Type? DotnetType;
-            public readonly bool IsGeneric;
-            public readonly TypeNode[] Children;
-
-            public TypeNode(string name, Type? dotnetType, bool isGeneric, params TypeNode[] children)
-            {
-                EdgeDBName = name;
-                DotnetType = dotnetType;
-                IsGeneric = isGeneric;
-                Children = children;
-            }
-
-            public override string ToString()
-            {
-                return $"{EdgeDBName} {DotnetType?.FullName} {IsGeneric} {string.Join(", ", Children)}";
-            }
-        }
+        private static readonly Regex GenericRegex = new(@"(.+?)<(.+?)>$");
+        private static readonly Regex NamedTupleRegex = new(@"(.*?[^:]):([^:].*?)$");
 
         public static bool TryGetType(string t, [MaybeNullWhen(false)] out TypeNode type)
         {
@@ -52,6 +81,7 @@ namespace EdgeDB.QueryBuilder.StandardLibGenerator
                 "cal::local_time" => typeof(TimeSpan),
                 "cal::local_datetime" => typeof(DateTime),
                 "cal::relative_duration" => typeof(TimeSpan),
+                "cal::date_duration" => typeof(TimeSpan),
                 "std::datetime" => typeof(DateTimeOffset),
                 "std::duration" => typeof(TimeSpan),
                 "std::float32" => typeof(float),
@@ -64,12 +94,13 @@ namespace EdgeDB.QueryBuilder.StandardLibGenerator
                 "std::decimal" => typeof(decimal),
                 "std::uuid" => typeof(Guid),
                 "std::json" => typeof(Json),
+                "schema::ScalarType" => typeof(Type),
                 _ => null
             };
 
             if (dotnetType is not null)
                 type = new(t, dotnetType, false);
-            else if (t.StartsWith("any"))
+            else if (t.StartsWith("any") || t.StartsWith("std::any"))
                 type = new(t, null, true);
             else
             {
@@ -84,10 +115,22 @@ namespace EdgeDB.QueryBuilder.StandardLibGenerator
                     "tuple" => typeof(ITuple),
                     "array" => typeof(IEnumerable<>),
                     "set" => typeof(IEnumerable<>),
+                    "range" => typeof(Range<>),
                     _ => null
                 };
 
-                var innerTypes = match.Groups[2].Value.Split(", ").Select(x => TryGetType(x, out var lt) ? lt : (TypeNode?)null);
+                var innerTypes = match.Groups[2].Value.Split(", ").Select(x =>
+                {
+                    var t = x.Replace("|", "::");
+                    var m = NamedTupleRegex.Match(t);
+                    if (!m.Success)
+                        return TryGetType(t, out var lt) ? lt : (TypeNode?)null;
+
+                    if (!TryGetType(m.Groups[2].Value, out var type))
+                        return new(m.Groups[2].Value, m.Groups[1].Value);
+
+                    return new TypeNode(m.Groups[2].Value, type.DotnetType, m.Groups[1].Value, type.IsGeneric, type.Children);
+                });
 
                 if (wrapperType is null || innerTypes.Any(x => !x.HasValue))
                     throw new Exception($"Type {t} not found");

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace EdgeDB.QueryBuilder.StandardLibGenerator
+namespace EdgeDB.StandardLibGenerator
 {
 	internal class CodeWriter
 	{

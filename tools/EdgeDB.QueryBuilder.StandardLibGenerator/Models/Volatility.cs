@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EdgeDB.QueryBuilder.StandardLibGenerator.Models
+namespace EdgeDB.StandardLibGenerator.Models
 {
     public enum Volatility
     {
