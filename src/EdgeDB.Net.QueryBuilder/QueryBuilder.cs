@@ -170,6 +170,7 @@ namespace EdgeDB
         /// <param name="includeGlobalsInQuery">
         ///     Whether or not to include globals in the query string.
         /// </param>
+        /// <param name="preFinalizerModifier">A delegate to finalize each node within the query.</param>
         /// <returns>
         ///     A <see cref="BuiltQuery"/> which is the current query this builder has constructed.
         /// </returns>
