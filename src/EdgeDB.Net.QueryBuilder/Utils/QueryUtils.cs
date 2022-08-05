@@ -242,7 +242,7 @@ namespace EdgeDB
         /// <exception cref="NotSupportedException">
         ///     The given type was not found within the introspection data.
         /// </exception>
-        public static IEnumerable<PropertyInfo> GetProperties(SchemaInfo schemaInfo, Type type, bool? exclusive = null, bool? @readonly = null)
+        public static IEnumerable<PropertyInfo> GetProperties(SchemaInfo schemaInfo, Type type, bool? exclusive = null, bool? @readonly = null, bool includeId = false)
         {
             if (!schemaInfo.TryGetObjectInfo(type, out var info))
                 throw new NotSupportedException($"Cannot use {type.Name} as there is no schema information for it.");
@@ -251,6 +251,8 @@ namespace EdgeDB
             return props.Where(x =>
             {
                 var edgedbName = x.GetEdgeDBPropertyName();
+                if (!includeId && edgedbName == "id")
+                    return false;
                 return info.Properties!.Any(x => x.Name == edgedbName &&
                     (!exclusive.HasValue || x.IsExclusive == exclusive.Value) &&
                     (!@readonly.HasValue || x.IsReadonly == @readonly.Value));
@@ -343,6 +345,23 @@ namespace EdgeDB
                 Expression.Parameter(typeof(QueryContext), "ctx"),
                 Expression.Parameter(typeof(TType), "x")
             );
+        }
+
+        public static IEnumerable<Expression> DisassembleExpression(Expression expression)
+        {
+            yield return expression;
+
+            var temp = expression;
+            while (temp is MemberExpression memberExpression)
+            {
+                if (memberExpression.Expression is not null)
+                {
+                    yield return memberExpression.Expression;
+                    temp = memberExpression.Expression;
+                }
+                else
+                    break;
+            }
         }
     }
 }

@@ -155,6 +155,12 @@ namespace EdgeDB
             Globals.Add(global);
         }
 
+        public void AddChildQuery(SubQuery query)
+        {
+            var name = QueryUtils.GenerateRandomVariableName();
+            NodeContext.ChildQueries.Add(name, query);
+        }
+
         /// <summary>
         ///     Enters a new context with the given modification delegate.
         /// </summary>

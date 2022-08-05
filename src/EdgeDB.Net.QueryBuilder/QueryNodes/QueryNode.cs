@@ -49,16 +49,6 @@ namespace EdgeDB.QueryNodes
         public SchemaInfo? SchemaInfo { get; set; }
 
         /// <summary>
-        ///     Gets a collection of referenced globals set by this node.
-        /// </summary>
-        internal List<int> ReferencedGlobals { get; } = new();
-
-        /// <summary>
-        ///     Gets a collection of referenced variables set by this node.
-        /// </summary>
-        internal List<string> ReferencedVariables { get; } = new();
-
-        /// <summary>
         ///     Gets a collection of child nodes.
         /// </summary>
         internal List<QueryNode> SubNodes { get; } = new();
@@ -118,7 +108,6 @@ namespace EdgeDB.QueryNodes
         /// <param name="value">The value of the variable to set.</param>
         protected void SetVariable(string name, object? value)
         {
-            ReferencedVariables.Add(name);
             Builder.QueryVariables[name] = value;
         }
 
@@ -132,7 +121,6 @@ namespace EdgeDB.QueryNodes
         {
             var global = new QueryGlobal(name, value, reference);
             Builder.QueryGlobals.Add(global);
-            ReferencedGlobals.Add(Builder.QueryGlobals.IndexOf(global));
         }
 
         /// <summary>

@@ -31,10 +31,12 @@ namespace EdgeDB.StandardLibGenerator.Models
         {
             var result = await QueryBuilder.Select<MetaType>((ctx) => new MetaType
             {
-                Pointers = ctx.Raw<Pointer[]>("[is schema::ObjectType].pointers { name, type: {name, is_abstract}}"),
-            }).Filter(x => x.Id == Id).ExecuteAsync(client);
+                Pointers = ctx.Raw<Pointer[]>("[is schema::ObjectType].pointers { name, target: {name, is_abstract}}"),
+                EnumValues = ctx.Raw<string[]?>("[is schema::ScalarType].enum_values")
+            }).Filter(x => x.Id == Id).BuildAsync(client);
 
-            return result.First()!;
+            return null!;
+            //return result.First()!;
         }
     }
 
@@ -43,6 +45,22 @@ namespace EdgeDB.StandardLibGenerator.Models
     {
         public Guid Id { get; set; }
         public Pointer[]? Pointers { get; set; }
+        public string[]? EnumValues { get; set; }
+
+        [EdgeDBIgnore]
+        public MetaInfoType Type
+            => Pointers is not null
+                ? MetaInfoType.Object
+                : EnumValues is not null
+                    ? MetaInfoType.Enum
+                    : MetaInfoType.Unknown;
+    }
+
+    public enum MetaInfoType
+    {
+        Enum,
+        Object,
+        Unknown
     }
 
     internal class Pointer

@@ -49,6 +49,17 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
+            var test = (await QueryBuilder.Insert((ctx) => new LinkPerson()
+            {
+                Name = "test1",
+                Email = "test1@mail.com",
+                BestFriend = new LinkPerson()
+                {
+                    Email = "test2@mail.com",
+                    Name = "test2"
+                }
+            }).BuildAsync(client)).Prettify();
+
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 

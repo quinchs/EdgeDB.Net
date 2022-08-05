@@ -28,8 +28,16 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         public Type CurrentType { get; init; }
 
+        /// <summary>
+        ///     Gets whether or not the current type is a json variable.
+        /// </summary>
         public bool IsJsonVariable
             => ReflectionUtils.IsSubTypeOfGenericType(typeof(JsonVariable<>), CurrentType);
+
+        /// <summary>
+        ///     Gets a collection of child queries.
+        /// </summary>
+        internal Dictionary<string, SubQuery> ChildQueries { get; } = new();
 
         /// <summary>
         ///     Constructs a new <see cref="NodeContext"/>.

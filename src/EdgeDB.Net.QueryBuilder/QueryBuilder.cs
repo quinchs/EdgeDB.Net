@@ -92,7 +92,7 @@ namespace EdgeDB
         /// <summary>
         ///     Constructs an empty query builder.
         /// </summary>
-        internal QueryBuilder()
+        public QueryBuilder()
         {
             _nodes = new();
             _queryGlobals = new();
@@ -718,7 +718,7 @@ namespace EdgeDB
         /// </returns>
         private async ValueTask<BuiltQuery> IntrospectAndBuildAsync(IEdgeDBQueryable edgedb, CancellationToken token)
         {
-            if(_nodes.Any(x => x.RequiresIntrospection))
+            if(_nodes.Any(x => x.RequiresIntrospection) || _queryGlobals.Any(x => x.Value is SubQuery subQuery && subQuery.RequiresIntrospection))
                 _schemaInfo ??= await SchemaIntrospector.GetOrCreateSchemaIntrospectionAsync(edgedb, token).ConfigureAwait(false);
 
             var result = Build();

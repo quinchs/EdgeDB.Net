@@ -39,30 +39,13 @@ namespace EdgeDB.Translators.Expressions
             // if the method references context or a parameter to our current root lambda
             var disassembledInstance = expression.Object is null 
                 ? Array.Empty<Expression> ()
-                : DisassembleInstance(expression.Object).ToArray();
+                : QueryUtils.DisassembleExpression(expression.Object).ToArray();
             
             var isInstanceReferenceToContext = expression.Object?.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(x => disassembledInstance.Contains(x));
-            var isParameterReferenceToContext = expression.Arguments.Any(x => x.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(y => DisassembleInstance(x).Contains(y)));
+            var isParameterReferenceToContext = expression.Arguments.Any(x => x.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(y => QueryUtils.DisassembleExpression(x).Contains(y)));
             var isExplicitTranslatorMethod = expression.Method.GetCustomAttribute<EquivalentOperator>() is not null;
             var isStdLib = expression.Method.DeclaringType == typeof(EdgeQL);
             return isStdLib || isExplicitTranslatorMethod || isParameterReferenceToContext || isInstanceReferenceToContext;
-        }
-
-        private IEnumerable<Expression> DisassembleInstance(Expression expression)
-        {
-            yield return expression;
-
-            var temp = expression;
-            while(temp is MemberExpression memberExpression)
-            {
-                if (memberExpression.Expression is not null)
-                {
-                    yield return memberExpression.Expression;
-                    temp = memberExpression.Expression;
-                }
-                else
-                    break;
-            }
         }
 
         private string? TranslateToEdgeQL(MethodCallExpression expression, ExpressionContext context)

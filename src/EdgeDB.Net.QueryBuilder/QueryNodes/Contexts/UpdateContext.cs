@@ -17,11 +17,6 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         public LambdaExpression? UpdateExpression { get; init; }
         
-        /// <summary>
-        ///     Gets a collection of child queries.
-        /// </summary>
-        internal Dictionary<string, SubQuery> ChildQueries { get; } = new();
-        
         /// <inheritdoc/>
         public UpdateContext(Type currentType) : base(currentType)
         {

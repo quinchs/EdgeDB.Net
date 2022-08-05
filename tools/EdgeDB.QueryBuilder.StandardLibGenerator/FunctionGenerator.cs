@@ -9,6 +9,7 @@ namespace EdgeDB.StandardLibGenerator
 {
     internal class FunctionGenerator
     {
+        private const string STDLIB_PATH = @"C:\Users\lynch\source\repos\EdgeDB\src\EdgeDB.Net.QueryBuilder\stdlib";
         private const string OUTPUT_PATH = @"C:\Users\lynch\source\repos\EdgeDB\src\EdgeDB.Net.QueryBuilder\Translators\Methods\Generated";
         private static readonly TextInfo _textInfo = new CultureInfo("en-US").TextInfo;
         private static readonly List<TypeNode> _generatedTypes = new();
@@ -47,13 +48,13 @@ namespace EdgeDB.StandardLibGenerator
             var writer = new CodeWriter();
 
             var edgedbType = funcs.FirstOrDefault(x => x.ReturnType!.Name! == groupType)?.ReturnType!;
-            var translatorType = TypeUtils.TryGetType(groupType, out var tInfo) ? BuildType(tInfo, edgedbType, TypeModifier.SingletonType, true) : groupType switch
+            var translatorType = TypeUtils.TryGetType(groupType, out var tInfo) ? await BuildType(tInfo, edgedbType, TypeModifier.SingletonType, true) : groupType switch
             {
                 "tuple" => typeof(ITuple).Name,
                 "array" => typeof(Array).Name,
                 "set" => typeof(IEnumerable).Name,
                 "range" => "IRange",
-                _  => groupType.Contains("::") ? BuildType(new(groupType, null), edgedbType, TypeModifier.SingletonType, true) : throw new Exception($"Failed to find matching type for {groupType}")
+                _  => groupType.Contains("::") ? await BuildType(new(groupType, null), edgedbType, TypeModifier.SingletonType, true) : throw new Exception($"Failed to find matching type for {groupType}")
             };
 
             writer.AppendLine("using EdgeDB;");
@@ -73,7 +74,7 @@ namespace EdgeDB.StandardLibGenerator
                         if (!TypeUtils.TryGetType(func.ReturnType!.Name!, out var returnTypeInfo))
                             throw new Exception($"Faield to get type {groupType}");
 
-                        var dotnetReturnType = BuildType(returnTypeInfo, func.ReturnType, TypeModifier.SingletonType);
+                        var dotnetReturnType = await BuildType(returnTypeInfo, func.ReturnType, TypeModifier.SingletonType);
 
                         switch (func.ReturnTypeModifier)
                         {
@@ -166,12 +167,12 @@ namespace EdgeDB.StandardLibGenerator
             }
         }
 
-        private static string BuildType(TypeNode node, EdgeDB.QueryBuilder.StandardLibGenerator.Models.Type edgedbType, TypeModifier modifier, bool shouldGenerate = true)
+        private static async ValueTask<string> BuildType(TypeNode node, EdgeDB.StandardLibGenerator.Models.Type edgedbType, TypeModifier modifier, bool shouldGenerate = true)
         {
             var name = node.IsGeneric
                             ? "object"
                             : node.DotnetType is null && node.RequiresGeneration && shouldGenerate
-                                ? GenerateType(node, edgedbType)
+                                ? await GenerateType(node, edgedbType)
                                 : node.DotnetType?.Name ?? "object";
 
             return modifier switch
@@ -183,8 +184,26 @@ namespace EdgeDB.StandardLibGenerator
             };
         }
 
-        private static string GenerateType(TypeNode node, EdgeDB.QueryBuilder.StandardLibGenerator.Models.Type edgedbType)
+        private static async Task<string> GenerateType(TypeNode node, EdgeDB.StandardLibGenerator.Models.Type edgedbType)
         {
+            var meta = await edgedbType.GetMetaInfoAsync(_client!);
+
+            switch (meta.Type)
+            {
+                case MetaInfoType.Object:
+                    {
+
+                    }
+                    break;
+                case MetaInfoType.Enum:
+                    {
+
+                    }
+                    break;
+                default:
+                    throw new Exception($"Unknown stdlib builder for type {edgedbType.TypeOfSelf}");
+            }
+
             return "";
         }
 
