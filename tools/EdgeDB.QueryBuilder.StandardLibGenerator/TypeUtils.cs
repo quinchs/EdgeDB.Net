@@ -14,6 +14,9 @@ namespace EdgeDB.StandardLibGenerator
 {
     public readonly struct TypeNode
     {
+        public readonly string DotnetTypeName
+            => DotnetType?.Name?.Replace("`1", "") ?? _dotnetName!;
+        
         public readonly string EdgeDBName;
         public readonly Type? DotnetType;
         public readonly bool IsGeneric;
@@ -23,6 +26,8 @@ namespace EdgeDB.StandardLibGenerator
         public readonly bool IsChildOfNamedTuple;
 
         public readonly bool RequiresGeneration;
+        public readonly bool WasGenerated;
+        private readonly string? _dotnetName;
 
         public TypeNode(string name, Type? dotnetType, bool isGeneric, params TypeNode[] children)
         {
@@ -33,6 +38,8 @@ namespace EdgeDB.StandardLibGenerator
             IsChildOfNamedTuple = false;
             TupleElementName = null;
             RequiresGeneration = false;
+            _dotnetName = null;
+            WasGenerated = false;
         }
         public TypeNode(string name, Type? dotnetType, string tupleName, bool isGeneric, params TypeNode[] children)
         {
@@ -43,6 +50,8 @@ namespace EdgeDB.StandardLibGenerator
             IsChildOfNamedTuple = true;
             TupleElementName = tupleName;
             RequiresGeneration = false;
+            _dotnetName = null;
+            WasGenerated = false;
         }
         public TypeNode(string name, string? tupleName)
         {
@@ -53,11 +62,28 @@ namespace EdgeDB.StandardLibGenerator
             Children = Array.Empty<TypeNode>();
             IsChildOfNamedTuple = tupleName is not null;
             TupleElementName = tupleName;
+            _dotnetName = null;
+            WasGenerated = false;
+        }
+        public TypeNode(string dotnetName, bool wasGenerated, string edgedbName)
+        {
+            EdgeDBName = edgedbName;
+            RequiresGeneration = true;
+            DotnetType = null;
+            IsGeneric = false;
+            Children = Array.Empty<TypeNode>();
+            IsChildOfNamedTuple = false;
+            TupleElementName = null;
+            _dotnetName = dotnetName;
+            WasGenerated = wasGenerated;
         }
 
         public override string ToString()
         {
-            return $"{EdgeDBName} {DotnetType?.FullName} {IsGeneric} {string.Join(", ", Children)}";
+            if (Children is null || !Children.Any())
+                return DotnetTypeName;
+
+            return $"{DotnetTypeName.Replace("`1", "")}<{string.Join(", ", Children)}>";
         }
     }
 
@@ -65,9 +91,16 @@ namespace EdgeDB.StandardLibGenerator
     {
         private static readonly Regex GenericRegex = new(@"(.+?)<(.+?)>$");
         private static readonly Regex NamedTupleRegex = new(@"(.*?[^:]):([^:].*?)$");
+        internal static readonly Dictionary<string, string> GeneratedTypes = new();
 
         public static bool TryGetType(string t, [MaybeNullWhen(false)] out TypeNode type)
         {
+            if(GeneratedTypes.TryGetValue(t, out var dotnetName))
+            {
+                type = new(dotnetName, true, t);
+                return true;
+            }
+
             type = default;
             
             var dotnetType = t switch

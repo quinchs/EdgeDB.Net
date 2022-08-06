@@ -18,7 +18,7 @@ writer.AppendLine();
 
 using (var _ = writer.BeginScope("namespace EdgeDB"))
 {
-    using (var __ = writer.BeginScope("public sealed partial class EdgeQL"))
+    using (var __ = writer.BeginScope("public sealed partial class EdgeQLTest"))
     {
         await FunctionGenerator.GenerateAsync(writer, edgedb, functions!);
     }

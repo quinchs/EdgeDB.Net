@@ -33,10 +33,8 @@ namespace EdgeDB.StandardLibGenerator.Models
             {
                 Pointers = ctx.Raw<Pointer[]>("[is schema::ObjectType].pointers { name, target: {name, is_abstract}}"),
                 EnumValues = ctx.Raw<string[]?>("[is schema::ScalarType].enum_values")
-            }).Filter(x => x.Id == Id).BuildAsync(client);
-
-            return null!;
-            //return result.First()!;
+            }).Filter(x => x.Id == Id).ExecuteAsync(client);
+            return result.First()!;
         }
     }
 
@@ -49,9 +47,9 @@ namespace EdgeDB.StandardLibGenerator.Models
 
         [EdgeDBIgnore]
         public MetaInfoType Type
-            => Pointers is not null
+            => Pointers?.Any() ?? false
                 ? MetaInfoType.Object
-                : EnumValues is not null
+                : EnumValues?.Any() ?? false
                     ? MetaInfoType.Enum
                     : MetaInfoType.Unknown;
     }
