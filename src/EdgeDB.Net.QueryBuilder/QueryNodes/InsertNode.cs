@@ -97,7 +97,7 @@ namespace EdgeDB.QueryNodes
             for (int i = 0; i != pathSections.Length; i++)
                 result = result.GetMember(pathSections[i]).First(x => x is PropertyInfo or FieldInfo)!.GetMemberType();
 
-            if (QueryUtils.IsLink(result, out var isMultiLink, out var innerType) && isMultiLink)
+            if (EdgeDBTypeUtils.IsLink(result, out var isMultiLink, out var innerType) && isMultiLink)
                 return innerType!;
 
             // return the final type.
@@ -203,7 +203,7 @@ namespace EdgeDB.QueryNodes
                 // generate a introspection-dependant sub query for the insert or select
                 var query = new SubQuery((info) =>
                 {
-                    var allProps = QueryUtils.GetProperties(info, node.Type);
+                    var allProps = QueryGenerationUtils.GetProperties(info, node.Type);
                     var typeName = node.Type.GetEdgeDBTypeName();
 
                     // define the insert shape
@@ -212,7 +212,7 @@ namespace EdgeDB.QueryNodes
                         var edgedbName = x.GetEdgeDBPropertyName();
                         
                         // if its a link, add a ternary statement for pulling the value out of a sub-map
-                        if (QueryUtils.IsLink(x.PropertyType, out var isArray, out _))
+                        if (EdgeDBTypeUtils.IsLink(x.PropertyType, out var isArray, out _))
                         {
                             // if we're in the last iteration of the depth map, we know for certian there
                             // are no sub types within the current context, we can safely set the link to 
@@ -228,7 +228,7 @@ namespace EdgeDB.QueryNodes
 
                         // if its a scalar type, use json_get to pull the value and cast it to our property
                         // type
-                        if (!QueryUtils.TryGetScalarType(x.PropertyType, out var edgeqlType))
+                        if (!EdgeDBTypeUtils.TryGetScalarType(x.PropertyType, out var edgeqlType))
                             throw new NotSupportedException($"Cannot use type {x.PropertyType} as there is no serializer for it");
 
                         return $"{edgedbName} := <{edgeqlType}>json_get({iterationName}, '{x.Name}')";
@@ -236,7 +236,7 @@ namespace EdgeDB.QueryNodes
                     });
 
                     // generate the 'insert .. unless conflict .. else select' query
-                    var exclusiveProps = QueryUtils.GetProperties(info, node.Type, true);
+                    var exclusiveProps = QueryGenerationUtils.GetProperties(info, node.Type, true);
                     var exclusiveCondition = exclusiveProps.Any() ?
                         $" unless conflict on {(exclusiveProps.Count() > 1 ? $"({string.Join(", ", exclusiveProps.Select(x => $".{x.GetEdgeDBPropertyName()}"))})" : $".{exclusiveProps.First().GetEdgeDBPropertyName()}")} else (select {typeName})"
                         : string.Empty;
@@ -268,7 +268,7 @@ namespace EdgeDB.QueryNodes
                 var edgedbName = x.GetEdgeDBPropertyName();
 
                 // if its a link, add a ternary statement for pulling the value out of a sub-map
-                if (QueryUtils.IsLink(x.PropertyType, out var isArray, out _))
+                if (EdgeDBTypeUtils.IsLink(x.PropertyType, out var isArray, out _))
                 {
                     // return a slice operator for multi links or a index operator for single links
                     return isArray
@@ -278,7 +278,7 @@ namespace EdgeDB.QueryNodes
 
                 // if its a scalar type, use json_get to pull the value and cast it to our property
                 // type
-                if (!QueryUtils.TryGetScalarType(x.PropertyType, out var edgeqlType))
+                if (!EdgeDBTypeUtils.TryGetScalarType(x.PropertyType, out var edgeqlType))
                     throw new NotSupportedException($"Cannot use type {x.PropertyType} as there is no serializer for it");
 
                 return $"{edgedbName} := <{edgeqlType}>json_get({jsonValue.Name}, '{x.Name}')";
@@ -317,13 +317,13 @@ namespace EdgeDB.QueryNodes
             {
                 // define the type and whether or not it's a link
                 var propType = property.PropertyType;
-                var isLink = QueryUtils.IsLink(property.PropertyType, out var isArray, out var innerType);
+                var isLink = EdgeDBTypeUtils.IsLink(property.PropertyType, out var isArray, out var innerType);
                 
                 // get the equivalent edgedb property name
                 var propertyName = property.GetEdgeDBPropertyName();
                 
                 // if a scalar type is found for the property type
-                if(QueryUtils.TryGetScalarType(propType, out var edgeqlType))
+                if(EdgeDBTypeUtils.TryGetScalarType(propType, out var edgeqlType))
                 {
                     // set it as a variable and continue the iteration
                     var varName = QueryUtils.GenerateRandomVariableName();
@@ -397,7 +397,7 @@ namespace EdgeDB.QueryNodes
                 return InlineOrGlobal(type, new SubQuery((info) =>
                 {
                     var name = type.GetEdgeDBTypeName();
-                    var exclusiveProps = QueryUtils.GetProperties(info, type, true);
+                    var exclusiveProps = QueryGenerationUtils.GetProperties(info, type, true);
                     var exclusiveCondition = exclusiveProps.Any() ?
                         $" unless conflict on {(exclusiveProps.Count() > 1 ? $"({string.Join(", ", exclusiveProps.Select(x => $".{x.GetEdgeDBPropertyName()}"))})" : $".{exclusiveProps.First().GetEdgeDBPropertyName()}")} else (select {name})"
                         : string.Empty;
@@ -454,19 +454,7 @@ namespace EdgeDB.QueryNodes
                 if (!SchemaInfo.TryGetObjectInfo(OperatingType, out var typeInfo))
                     throw new NotSupportedException($"Could not find type info for {OperatingType}");
 
-                // get all exclusive properties that aren't the id property
-                var exclusiveProperties = typeInfo.Properties?.Where(x => x.IsExclusive && x.Name != "id");
-
-                if (exclusiveProperties == null || !exclusiveProperties.Any())
-                    throw new NotSupportedException($"The type {typeInfo.Name} does not have any user defined exclusive properties");
-
-                // build the constraints
-                // TODO: (.prop1, .prop2) isn't valid for multiple contraints.
-                var constraint = exclusiveProperties.Count() > 1 ?
-                    $"({string.Join(", ", exclusiveProperties.Select(x => $".{x.Name}"))})" :
-                    $".{exclusiveProperties.First().Name}";
-
-                Query.Append($" unless conflict on {constraint}");
+                Query.Append(ConflictUtils.GenerateExclusiveConflictStatement(typeInfo, _elseStatement.Length != 0));
             }
             
             Query.Append(_elseStatement);

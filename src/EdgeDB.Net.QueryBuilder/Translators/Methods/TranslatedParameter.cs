@@ -31,25 +31,25 @@ namespace EdgeDB.Translators.Methods
         ///     Gets whether or not the parameter type is a scalar array.
         /// </summary>
         public bool IsScalarArrayType
-            => QueryUtils.TryGetScalarType(ParameterType, out var info) && info.IsArray;
+            => EdgeDBTypeUtils.TryGetScalarType(ParameterType, out var info) && info.IsArray;
 
         /// <summary>
         ///     Gets whether or not the parameter is a scalar type.
         /// </summary>
         public bool IsScalarType
-            => QueryUtils.TryGetScalarType(ParameterType, out _);
+            => EdgeDBTypeUtils.TryGetScalarType(ParameterType, out _);
 
         /// <summary>
         ///     Gets whether or not the parameter is a valid link type.
         /// </summary>
         public bool IsLinkType
-            => QueryUtils.IsLink(ParameterType, out _, out _);
+            => EdgeDBTypeUtils.IsLink(ParameterType, out _, out _);
 
         /// <summary>
         ///     Gets whether or not the parameter is a valid multi-link type.
         /// </summary>
         public bool IsMutliLinkType
-            => QueryUtils.IsLink(ParameterType, out var isMulti, out _) && isMulti;
+            => EdgeDBTypeUtils.IsLink(ParameterType, out var isMulti, out _) && isMulti;
 
         /// <summary>
         ///     Constructs a new <see cref="TranslatedParameter"/>.

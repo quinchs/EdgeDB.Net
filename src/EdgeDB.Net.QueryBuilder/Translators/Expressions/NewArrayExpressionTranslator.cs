@@ -20,7 +20,7 @@ namespace EdgeDB.Translators.Expressions
             var elements = string.Join(", ", expression.Expressions.Select(x => TranslateExpression(x, context)));
 
             // if its a collection of link-valid types, serialzie it as a set
-            if(QueryUtils.IsLink(expression.Type, out _, out _))
+            if(EdgeDBTypeUtils.IsLink(expression.Type, out _, out _))
                 return $"{{ {elements} }}";
 
             // serialize as a scalar array

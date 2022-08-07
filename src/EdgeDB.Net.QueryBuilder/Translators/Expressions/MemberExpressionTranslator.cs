@@ -17,7 +17,7 @@ namespace EdgeDB.Translators.Expressions
         public override string? Translate(MemberExpression expression, ExpressionContext context)
         {
             // deconstruct the member access tree.
-            var deconstructed = QueryUtils.DisassembleExpression(expression).ToArray();
+            var deconstructed = ExpressionUtils.DisassembleExpression(expression).ToArray();
             
             // if the resolute expression is a constant expression, assume
             // were in a set-like context and add it as a variable.
@@ -40,7 +40,7 @@ namespace EdgeDB.Translators.Expressions
                 // we can add this as our variable.
                 var varName = context.AddVariable(refHolder);
                 
-                if (!QueryUtils.TryGetScalarType(expression.Type, out var type))
+                if (!EdgeDBTypeUtils.TryGetScalarType(expression.Type, out var type))
                     throw new NotSupportedException($"Cannot use {expression.Type} as no edgeql equivalent can be found");
 
                 return $"<{type}>${varName}";

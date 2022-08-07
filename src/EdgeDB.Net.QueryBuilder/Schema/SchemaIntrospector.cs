@@ -59,6 +59,10 @@ namespace EdgeDB.Schema
                 Id = ctx.Include<Guid>(),
                 IsAbstract = ctx.Include<bool>(),
                 Name = ctx.Include<string>(),
+                Constraints = ctx.IncludeMultiLink(() => new Constraint 
+                {
+                    SubjectExpression = ctx.Include<string>()
+                }),
                 Properties = ctx.IncludeMultiLink(() => new Property
                 {
                     Cardinality = (string)ctx.UnsafeLocal<object>("cardinality") == "One"

@@ -35,9 +35,14 @@ namespace EdgeDB.Schema.DataTypes
         public bool IsAbstract { get; set; }
 
         /// <summary>
-        ///     Gets or sets a collection of properties within this objec type.
+        ///     Gets or sets a collection of properties within this object type.
         /// </summary>
         [EdgeDBProperty("pointers")]
         public Property[]? Properties { get; set; }
+
+        /// <summary>
+        ///     Gets or sets a collection of constaints on the object level.
+        /// </summary>
+        public Constraint[]? Constraints { get; set; }
     }
 }

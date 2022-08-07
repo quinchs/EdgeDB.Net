@@ -43,7 +43,7 @@ namespace EdgeDB.Translators.Expressions
                             return value;
                         }
 
-                        var type = QueryUtils.TryGetScalarType(expression.Type, out var edgedbType) 
+                        var type = EdgeDBTypeUtils.TryGetScalarType(expression.Type, out var edgedbType) 
                             ? edgedbType.ToString()
                             : expression.Type.GetEdgeDBTypeName();
                         

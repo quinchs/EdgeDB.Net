@@ -20,13 +20,14 @@ namespace EdgeDB.Translators.Expressions
                 // get the members type and edgedb equivalent name
                 var memberType = Member.GetMemberType();
                 var memberName = Member.GetEdgeDBPropertyName();
-                var isLink = QueryUtils.IsLink(memberType, out var isMultiLink, out var innerType);
+                var typeName = memberType.GetEdgeDBTypeName();
+                var isLink = EdgeDBTypeUtils.IsLink(memberType, out var isMultiLink, out var innerType);
 
                 switch (Expression)
                 {
                     case MemberExpression when isLink:
                         {
-                            var disassembled = QueryUtils.DisassembleExpression(Expression).ToArray();
+                            var disassembled = ExpressionUtils.DisassembleExpression(Expression).ToArray();
                             if(disassembled.Last() is ConstantExpression constant && disassembled[disassembled.Length - 2] is MemberExpression constParent)
                             {
                                 // get the value
@@ -52,14 +53,13 @@ namespace EdgeDB.Translators.Expressions
                                 context.SetGlobal(name, new SubQuery((info) =>
                                 {
                                     // generate an insert shape
-                                    var insertShape = ExpressionTranslator.ContextualTranslate(QueryUtils.GenerateInsertShapeExpression(memberValue, memberType), context);
+                                    var insertShape = ExpressionTranslator.ContextualTranslate(QueryGenerationUtils.GenerateInsertShapeExpression(memberValue, memberType), context);
 
-                                    var exclusiveProps = QueryUtils.GetProperties(info, memberType, true);
-                                    var exclusiveCondition = exclusiveProps.Any() ?
-                                        $" unless conflict on {(exclusiveProps.Count() > 1 ? $"({string.Join(", ", exclusiveProps.Select(x => $".{x.GetEdgeDBPropertyName()}"))})" : $".{exclusiveProps.First().GetEdgeDBPropertyName()}")} else (select {memberType.GetEdgeDBTypeName()})"
-                                        : string.Empty;
+                                    if (!info.TryGetObjectInfo(memberType, out var objInfo))
+                                        throw new InvalidOperationException($"No schema type found for {memberType}");
 
-                                    return $"(insert {memberType.GetEdgeDBTypeName()} {{ {insertShape} }}{exclusiveCondition})";
+                                    var exclusiveCondition = $"{ConflictUtils.GenerateExclusiveConflictStatement(objInfo, true)} else (select {typeName})";
+                                    return $"(insert {memberType.GetEdgeDBTypeName()} {{ {insertShape} }} {exclusiveCondition})";
                                 }), null);
                                 initializations.Add($"{memberName} := {name}");
                             }
@@ -74,12 +74,12 @@ namespace EdgeDB.Translators.Expressions
                                 // generate an insert shape
                                 var insertShape = ExpressionTranslator.ContextualTranslate(expression, context);
 
-                                var exclusiveProps = QueryUtils.GetProperties(info, memberType, true);
-                                var exclusiveCondition = exclusiveProps.Any() ?
-                                    $" unless conflict on {(exclusiveProps.Count() > 1 ? $"({string.Join(", ", exclusiveProps.Select(x => $".{x.GetEdgeDBPropertyName()}"))})" : $".{exclusiveProps.First().GetEdgeDBPropertyName()}")} else (select {memberType.GetEdgeDBTypeName()})"
-                                    : string.Empty;
+                                if (!info.TryGetObjectInfo(memberType, out var objInfo))
+                                    throw new InvalidOperationException($"No schema type found for {memberType}");
 
-                                return $"(insert {memberType.GetEdgeDBTypeName()} {{ {insertShape} }}{exclusiveCondition})";
+                                var exclusiveCondition = $"{ConflictUtils.GenerateExclusiveConflictStatement(objInfo, true)} else (select {typeName})";
+
+                                return $"(insert {memberType.GetEdgeDBTypeName()} {{ {insertShape} }} {exclusiveCondition})";
                             }), null);
                             initializations.Add($"{memberName} := {name}");
                         }

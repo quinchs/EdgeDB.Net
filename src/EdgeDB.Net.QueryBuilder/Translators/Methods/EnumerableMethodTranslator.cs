@@ -62,7 +62,7 @@ namespace EdgeDB.Translators.Methods
             var name = ((LambdaExpression)filterOrDefault.RawValue).Parameters[0].Name;
             var set = source.IsScalarArrayType ? $"array_unpack({source})" : source.ToString();
             var returnType = ((LambdaExpression)filterOrDefault.RawValue).Parameters[0].Type;
-            return $"<{QueryUtils.GetEdgeDBScalarOrTypename(returnType)}>array_get(array_agg((select {name} := {set} filter {filterOrDefault})), 0){(defaultValue != null ? $" ?? {defaultValue}" : String.Empty)}";
+            return $"<{EdgeDBTypeUtils.GetEdgeDBScalarOrTypename(returnType)}>array_get(array_agg((select {name} := {set} filter {filterOrDefault})), 0){(defaultValue != null ? $" ?? {defaultValue}" : String.Empty)}";
         }
 
     }

@@ -27,7 +27,7 @@ namespace EdgeDB.Translators.Expressions
             var result = Expression.Lambda(expression, context.RootExpression.Parameters).Compile().DynamicInvoke();
 
             // attempt to get the scalar type of the result of the method.
-            if (!QueryUtils.TryGetScalarType(expression.Type, out var type))
+            if (!EdgeDBTypeUtils.TryGetScalarType(expression.Type, out var type))
                 throw new InvalidOperationException($"Cannot use {expression.Type} as a result in an un-translated context");
 
             // return the variable name containing the result of the method.
@@ -39,10 +39,10 @@ namespace EdgeDB.Translators.Expressions
             // if the method references context or a parameter to our current root lambda
             var disassembledInstance = expression.Object is null 
                 ? Array.Empty<Expression> ()
-                : QueryUtils.DisassembleExpression(expression.Object).ToArray();
+                : ExpressionUtils.DisassembleExpression(expression.Object).ToArray();
             
             var isInstanceReferenceToContext = expression.Object?.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(x => disassembledInstance.Contains(x));
-            var isParameterReferenceToContext = expression.Arguments.Any(x => x.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(y => QueryUtils.DisassembleExpression(x).Contains(y)));
+            var isParameterReferenceToContext = expression.Arguments.Any(x => x.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(y => ExpressionUtils.DisassembleExpression(x).Contains(y)));
             var isExplicitTranslatorMethod = expression.Method.GetCustomAttribute<EquivalentOperator>() is not null;
             var isStdLib = expression.Method.DeclaringType == typeof(EdgeQL);
             return isStdLib || isExplicitTranslatorMethod || isParameterReferenceToContext || isInstanceReferenceToContext;

@@ -82,7 +82,7 @@ namespace EdgeDB
         /// <returns>The added or updated value.</returns>
         public async Task<TType?> AddOrUpdateAsync(TType item, CancellationToken token = default)
         {
-            var updateFactory = await QueryUtils.GenerateUpdateFactoryAsync(_edgedb, item, token).ConfigureAwait(false);
+            var updateFactory = await QueryGenerationUtils.GenerateUpdateFactoryAsync(_edgedb, item, token).ConfigureAwait(false);
 
             return await QueryBuilder
                 .Insert(item)
@@ -154,7 +154,7 @@ namespace EdgeDB
                     ).Any();
             
             // try to get exclusive property set on the instance
-            var props = await QueryUtils.GetPropertiesAsync<TType>(_edgedb, exclusive: true, token: token).ConfigureAwait(false);
+            var props = await QueryGenerationUtils.GetPropertiesAsync<TType>(_edgedb, exclusive: true, token: token).ConfigureAwait(false);
 
             if (!props.Any())
                 throw new NotSupportedException("No unique constraints found to generate filter condition.");
@@ -219,7 +219,7 @@ namespace EdgeDB
         public async Task<TType?> UpdateAsync(TType value, Expression<Func<TType, TType>> updateFunc, CancellationToken token = default)
             => (await QueryBuilder
                 .Update(updateFunc)
-                .Filter(await QueryUtils.GenerateUpdateFilterAsync(_edgedb, value, token))
+                .Filter(await QueryGenerationUtils.GenerateUpdateFilterAsync(_edgedb, value, token))
                 .ExecuteAsync(_edgedb, token: token).ConfigureAwait(false)).FirstOrDefault();
 
         /// <summary>
@@ -234,8 +234,8 @@ namespace EdgeDB
         /// <returns>The updated item.</returns>
         public async Task<TType?> UpdateAsync(TType value, CancellationToken token = default)
             => (await QueryBuilder
-                .Update(await QueryUtils.GenerateUpdateFactoryAsync(_edgedb, value, token))
-                .Filter(await QueryUtils.GenerateUpdateFilterAsync(_edgedb, value, token))
+                .Update(await QueryGenerationUtils.GenerateUpdateFactoryAsync(_edgedb, value, token))
+                .Filter(await QueryGenerationUtils.GenerateUpdateFilterAsync(_edgedb, value, token))
                 .ExecuteAsync(_edgedb, token: token).ConfigureAwait(false)).FirstOrDefault();
     }
 }

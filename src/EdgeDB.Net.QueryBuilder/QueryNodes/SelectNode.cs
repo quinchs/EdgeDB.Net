@@ -41,7 +41,7 @@ namespace EdgeDB.QueryNodes
                 var name = x.GetEdgeDBPropertyName();
 
                 // if its a link, build a nested shape if we're not past our max depth
-                if (QueryUtils.IsLink(x.PropertyType, out var isArray, out var innerType))
+                if (EdgeDBTypeUtils.IsLink(x.PropertyType, out var isArray, out var innerType))
                 {
                     var shapeType = isArray ? innerType! : x.PropertyType;
                     if(currentDepth < MAX_DEPTH)
