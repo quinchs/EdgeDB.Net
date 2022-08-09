@@ -5,6 +5,7 @@ using EdgeDB.StandardLibGenerator.Models;
 var edgedb = new EdgeDBClient();
 
 //var operators = await QueryBuilder.Select<Operator>().Filter(x => !x.IsAbstract).ExecuteAsync(edgedb);
+var t = QueryBuilder.Select<Function>().Filter(x => x.BuiltIn).Build().Prettify();
 var functions = await QueryBuilder.Select<Function>().Filter(x => x.BuiltIn).ExecuteAsync(edgedb)!;
 
 var writer = new CodeWriter();

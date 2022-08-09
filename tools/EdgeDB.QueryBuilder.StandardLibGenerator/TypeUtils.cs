@@ -145,7 +145,7 @@ namespace EdgeDB.StandardLibGenerator
 
                 Type? wrapperType = match.Groups[1].Value switch
                 {
-                    "tuple" => typeof(ITuple),
+                    "tuple" => typeof(ValueTuple<>),
                     "array" => typeof(IEnumerable<>),
                     "set" => typeof(IEnumerable<>),
                     "range" => typeof(Range<>),
