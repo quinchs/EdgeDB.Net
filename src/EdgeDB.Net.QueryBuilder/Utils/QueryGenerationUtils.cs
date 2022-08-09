@@ -55,6 +55,7 @@ namespace EdgeDB
         ///     <see langword="false"/> to exclude readonly properties.
         ///     <see langword="null"/> to include either or.
         /// </param>
+        /// <param name="includeId">Whether or not to include the 'id' property.</param>
         /// <returns>A collection of <see cref="PropertyInfo"/>.</returns>
         /// <exception cref="NotSupportedException">
         ///     The given type was not found within the introspection data.
