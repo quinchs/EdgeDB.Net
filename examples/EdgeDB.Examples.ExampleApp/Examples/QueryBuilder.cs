@@ -38,7 +38,20 @@ namespace EdgeDB.ExampleApp.Examples
         {
             public string? Name { get; set; }
             public string? Email { get; set; }
+        
             public IEnumerable<string>? Roles { get; set; }
+        }
+
+        public class PropertyConstraintPerson
+        {
+            public string? Name { get; set; }
+            public string? Email { get; set; }
+        }
+
+        public class ConstraintPerson
+        {
+            public string? Name { get; set; }
+            public string? Email { get; set; }
         }
 
         public async Task ExecuteAsync(EdgeDBClient client)
@@ -49,6 +62,7 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
+            var test = await QueryBuilder.Insert(new ConstraintPerson { Email = "test", Name = "test" }).UnlessConflict().BuildAsync(client);
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 

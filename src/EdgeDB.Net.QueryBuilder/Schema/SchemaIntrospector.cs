@@ -61,7 +61,8 @@ namespace EdgeDB.Schema
                 Name = ctx.Include<string>(),
                 Constraints = ctx.IncludeMultiLink(() => new Constraint 
                 {
-                    SubjectExpression = ctx.Include<string>()
+                    SubjectExpression = ctx.Include<string>(),
+                    Name = ctx.Include<string>(),
                 }),
                 Properties = ctx.IncludeMultiLink(() => new Property
                 {

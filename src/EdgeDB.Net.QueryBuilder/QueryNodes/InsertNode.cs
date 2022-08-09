@@ -454,7 +454,7 @@ namespace EdgeDB.QueryNodes
                 if (!SchemaInfo.TryGetObjectInfo(OperatingType, out var typeInfo))
                     throw new NotSupportedException($"Could not find type info for {OperatingType}");
 
-                Query.Append(ConflictUtils.GenerateExclusiveConflictStatement(typeInfo, _elseStatement.Length != 0));
+                Query.Append($" {ConflictUtils.GenerateExclusiveConflictStatement(typeInfo, _elseStatement.Length != 0)}");
             }
             
             Query.Append(_elseStatement);
