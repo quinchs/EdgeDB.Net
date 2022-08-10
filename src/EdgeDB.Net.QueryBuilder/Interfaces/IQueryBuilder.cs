@@ -14,8 +14,10 @@ namespace EdgeDB
         ISelectQuery<TType>,
         IUpdateQuery<TType>,
         IDeleteQuery<TType>,
+        IInsertQuery<TType>,
         IUnlessConflictOn<TType>,
-        IInsertQuery<TType>
+        IGroupQuery<TType>,
+        IGroupable<TType>
     {
         /// <summary>
         ///     Adds a value to a <c>WITH</c> statement.
@@ -113,7 +115,6 @@ namespace EdgeDB
         /// </summary>
         IDeleteQuery<TType> Delete { get; }
     }
-
 
     /// <summary>
     ///     Represents a generic query builder with a build function.

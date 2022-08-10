@@ -11,7 +11,7 @@ namespace EdgeDB.Interfaces.Queries
     ///     Represents a generic <c>DELETE</c> query used within a <see cref="IQueryBuilder"/>.
     /// </summary>
     /// <typeparam name="TType">The type which this <c>DELETE</c> query is querying against.</typeparam>
-    public interface IDeleteQuery<TType> : IMultiCardinalityExecutable<TType>
+    public interface IDeleteQuery<TType> : IGroupable<TType>, IMultiCardinalityExecutable<TType>
     {
         /// <summary>
         ///     Filters the current delete query by the given predicate.

@@ -11,7 +11,7 @@ namespace EdgeDB.Interfaces.Queries
     ///     Represents a generic <c>UPDATE</c> query used within a <see cref="IQueryBuilder"/>.
     /// </summary>
     /// <typeparam name="TType">The type which this <c>UPDATE</c> query is querying against.</typeparam>
-    public interface IUpdateQuery<TType> : IMultiCardinalityExecutable<TType>
+    public interface IUpdateQuery<TType> : IGroupable<TType>, IMultiCardinalityExecutable<TType>
     {
         /// <summary>
         ///     Filters the current update query by the given predicate.

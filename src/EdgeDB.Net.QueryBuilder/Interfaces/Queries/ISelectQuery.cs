@@ -11,7 +11,7 @@ namespace EdgeDB.Interfaces.Queries
     ///     Represents a generic <c>SELECT</c> query used within a <see cref="IQueryBuilder"/>.
     /// </summary>
     /// <typeparam name="TType">The type which this <c>SELECT</c> query is querying against.</typeparam>
-    public interface ISelectQuery<TType> : IMultiCardinalityExecutable<TType>
+    public interface ISelectQuery<TType> : IGroupable<TType>, IMultiCardinalityExecutable<TType>
     {
         /// <summary>
         ///     Filters the current select query by the given predicate.

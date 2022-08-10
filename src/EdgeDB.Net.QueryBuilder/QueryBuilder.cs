@@ -707,6 +707,26 @@ namespace EdgeDB
             => LimitExp(limit);
         #endregion
 
+        #region IGroupable
+        IGroupQuery<Group<TKey, TType>> IGroupable<TType>.GroupBy<TKey>(Expression<Func<TType, TKey>> propertySelector)
+        {
+            AddNode<GroupNode>(new GroupContext(typeof(TType))
+            {
+                PropertyExpression = propertySelector
+            });
+            return EnterNewType<Group<TKey, TType>>();
+        }
+
+        IGroupQuery<Group<TKey, TType>> IGroupable<TType>.Group<TKey>(Expression<Func<TType, GroupBuilder, KeyedGroupBuilder<TKey>>> groupBuilder)
+        {
+            AddNode<GroupNode>(new GroupContext(typeof(TType))
+            {
+                BuilderExpression = groupBuilder
+            });
+            return EnterNewType<Group<TKey, TType>>();
+        }
+        #endregion
+
         /// <summary>
         ///     Preforms introspection and then builds this query builder into a <see cref="BuiltQuery"/>.
         /// </summary>
