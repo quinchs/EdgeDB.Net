@@ -62,7 +62,14 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
-            var test = await QueryBuilder.Insert(new ConstraintPerson { Email = "test", Name = "test" }).UnlessConflict().BuildAsync(client);
+            var test = (await QueryBuilder
+                .Insert(new ConstraintPerson { Email = "test", Name = "test" })
+                .UnlessConflict()
+                .Else(x => x.Update(old => new ConstraintPerson
+                {
+                    Name = old == null ? "test" : old.Name + "new"
+                }))
+                .BuildAsync(client)).Prettify();
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 

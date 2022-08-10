@@ -22,7 +22,7 @@ namespace EdgeDB.Interfaces.Queries
         ///     when this query executes.
         /// </remarks>
         /// <returns>The current query.</returns>
-        IUnlessConflictOn<TType?> UnlessConflict();
+        IUnlessConflictOn<TType> UnlessConflict();
 
         /// <summary>
         ///     Adds an <c>UNLESS CONFLICT ON</c> statement with the given property selector.

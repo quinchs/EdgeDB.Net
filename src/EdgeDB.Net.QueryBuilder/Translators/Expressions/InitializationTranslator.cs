@@ -93,7 +93,9 @@ namespace EdgeDB.Translators.Expressions
                                 x.IsShape = false;
                             });
                             string? value = ExpressionTranslator.ContextualTranslate(Expression, newContext);
-                            bool isSetter = context.NodeContext is InsertContext || context.NodeContext.CurrentType.GetProperty(Member.Name) == null || Expression is MethodCallExpression;
+                            bool isSetter = context.NodeContext is InsertContext or UpdateContext || 
+                                context.NodeContext.CurrentType.GetProperty(Member.Name) == null || 
+                                Expression is MethodCallExpression;
 
                             // add it to our shape
                             if (value is null) // include
