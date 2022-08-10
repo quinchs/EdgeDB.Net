@@ -523,7 +523,7 @@ namespace EdgeDB
         /// <exception cref="InvalidOperationException">
         ///     The current node does not support unless conflict on statements.
         /// </exception>
-        private QueryBuilder<TType?> UnlessConflict()
+        private QueryBuilder<TType> UnlessConflict()
         {
             if (CurrentUserNode is not InsertNode insertNode)
                 throw new InvalidOperationException($"Cannot unless conflict on a {CurrentUserNode}");
@@ -658,7 +658,7 @@ namespace EdgeDB
         #endregion
 
         #region IInsertQuery
-        IUnlessConflictOn<TType?> IInsertQuery<TType>.UnlessConflict()
+        IUnlessConflictOn<TType> IInsertQuery<TType>.UnlessConflict()
             => UnlessConflict();
         IUnlessConflictOn<TType> IInsertQuery<TType>.UnlessConflictOn(Expression<Func<TType, object?>> propertySelector)
             => UnlessConflictOn(propertySelector);

@@ -59,12 +59,12 @@ namespace EdgeDB
         /// <param name="updateFactory">The factory to update the item.</param>
         /// <param name="token">A cancellation token to cancel the asynchronous insert operation.</param>
         /// <returns>The added value.</returns>
-        public Task<TType?> AddOrUpdateAsync(TType item, Expression<Func<TType?, TType?>> updateFactory, CancellationToken token = default)
+        public Task<TType?> AddOrUpdateAsync(TType item, Expression<Func<TType, TType>> updateFactory, CancellationToken token = default)
             => QueryBuilder
                 .Insert(item)
                 .UnlessConflict()
                 .Else(b => 
-                    (Interfaces.ISingleCardinalityExecutable<TType?>)b.Update(updateFactory)
+                    (Interfaces.ISingleCardinalityExecutable<TType>)b.Update(updateFactory)
                 )
                 .ExecuteAsync(_edgedb, token: token);
 
@@ -88,7 +88,7 @@ namespace EdgeDB
                 .Insert(item)
                 .UnlessConflict()
                 .Else(q => 
-                    (Interfaces.ISingleCardinalityExecutable<TType?>)q.Update(updateFactory!, false)
+                    (ISingleCardinalityExecutable<TType>)q.Update(updateFactory!, false)
                 ).ExecuteAsync(_edgedb, token: token).ConfigureAwait(false);
         }
 
