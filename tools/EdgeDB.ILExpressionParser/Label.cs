@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.ILExpressionParser
 {
-    internal readonly struct Label
+    public readonly struct Label
     {
         public readonly int Offset;
 

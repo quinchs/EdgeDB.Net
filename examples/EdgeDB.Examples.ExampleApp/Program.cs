@@ -9,13 +9,7 @@ using Serilog;
 void Test()
 {
     var func = (int x) => x += 1;
-    ILReader reader = new(func.Method);
-
-    List<EdgeDB.ILExpressionParser.Instruction> inst = new();
-    while(reader.ReadNext(out var instruction))
-    {
-        inst.Add(instruction);
-    }
+    var result = ExpressionParser.Parse<Func<int, int>>(func);
 
 }
 

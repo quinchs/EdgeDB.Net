@@ -11,8 +11,9 @@ namespace EdgeDB.ILExpressionParser
 {
     public unsafe ref struct ILReader
     {
+        public readonly MethodBody MethodBody;
+        public readonly MethodBase MethodBase;
         private readonly Span<byte> _il;
-        private readonly MethodBody _methodBody;
         private int _position;
         private byte CurrentByte
             => _il[_position];
@@ -20,14 +21,25 @@ namespace EdgeDB.ILExpressionParser
         private byte NextByte
             => _il[_position + 1];
 
+        public Label MarkPosition() => new Label(_position);
+
         public ILReader(MethodBase method)
         {
+            MethodBase = method;
             var bodyInfo = method.GetMethodBody()!;
-            
             _position = 0;
-            _methodBody = bodyInfo;
+            MethodBody = bodyInfo;
             _il = bodyInfo.GetILAsByteArray();
         }
+
+        public void Seek(Label label)
+            => _position = label.Offset;
+
+        public Span<byte> PeekBytes(int count)
+            => _il[..count];
+
+        public Span<byte> PeekBytes(int index, int count)
+            => _il[index..count];
 
         public bool ReadNext(out Instruction instruction)
         {
@@ -91,7 +103,7 @@ namespace EdgeDB.ILExpressionParser
                     throw new NotImplementedException($"No implementation found for oprand {opCode}");
             }
 
-            instruction = new(opCode, oprand);
+            instruction = new(opCode, oprand, MethodBase);
             return true;
         }
 
