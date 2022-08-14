@@ -135,8 +135,10 @@ namespace EdgeDB
                 {
                     case JObject jObject:
                         return CalculateNodeDepth(jObject, depth + 1);
-                    case JArray jArray:
+                    case JArray jArray when jArray.Any():
                         return jArray.Max(x => x is JObject subNode ? CalculateNodeDepth(subNode, depth + 1) : depth);
+                    case JArray jArray:
+                        return -1; // empty array has no depth
                     default:
                         return depth;
                 }

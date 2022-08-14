@@ -20,33 +20,6 @@ namespace EdgeDB.QueryNodes
     internal class InsertNode : QueryNode<InsertContext>
     {
         /// <summary>
-        ///     Represents a node within a depth map.
-        /// </summary>
-        private readonly struct DepthNode
-        {
-            /// <summary>
-            ///     The type of the node, this type represents the nodes value.
-            /// </summary>
-            public readonly Type Type;
-
-            /// <summary>
-            ///     The value of the node.
-            /// </summary>
-            public readonly JObject Node;
-
-            /// <summary>
-            ///     Constructs a new <see cref="DepthNode"/>.
-            /// </summary>
-            /// <param name="type">The type of the node.</param>
-            /// <param name="node">The node containing the value.</param>
-            public DepthNode(Type type, JObject node)
-            {
-                Type = type;
-                Node = node;
-            }
-        }
-
-        /// <summary>
         ///     Whether or not to autogenerate the unless conflict clause.
         /// </summary>
         private bool _autogenerateUnlessConflict;
@@ -62,46 +35,10 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         private readonly List<Type> _subQueryMap = new();
 
-        /// <summary>
-        ///     The regex used to resolve json paths.
-        /// </summary>
-        private readonly Regex _pathResolverRegex = new(@"\[\d+?](?>\.(.*?)$|$)");
-        
         /// <inheritdoc/>
         public InsertNode(NodeBuilder builder) : base(builder) 
         {
             _elseStatement = new();
-        }
-
-        /// <summary>
-        ///     Resolves the type of a property given the string json path.
-        /// </summary>
-        /// <param name="rootType">The root type of the json variable</param>
-        /// <param name="path">The path used to resolve the type of the property.</param>
-        /// <returns></returns>
-        private Type ResolveTypeFromPath(Type rootType, string path)
-        {
-            // match our path resolving regex
-            var match = _pathResolverRegex.Match(path);
-
-            // if the first group is empty, were dealing with a index
-            // only. We can safely return the root type.
-            if (string.IsNullOrEmpty(match.Groups[1].Value))
-                return rootType;
-
-            // split the main path up
-            var pathSections = match.Groups[1].Value.Split('.');
-
-            // iterate over it, pulling each member out and getting the member type.
-            Type result = rootType;
-            for (int i = 0; i != pathSections.Length; i++)
-                result = result.GetMember(pathSections[i]).First(x => x is PropertyInfo or FieldInfo)!.GetMemberType();
-
-            if (EdgeDBTypeUtils.IsLink(result, out var isMultiLink, out var innerType) && isMultiLink)
-                return innerType!;
-
-            // return the final type.
-            return result;
         }
 
         /// <summary>
@@ -117,81 +54,13 @@ namespace EdgeDB.QueryNodes
             var depth = jsonValue.Depth;
 
             // create a depth map that contains each nested level of types to be inserted
-            List<DepthNode>[] depthMap = new List<DepthNode>[depth + 1];
-
-            // iterate over the number of child types we have
-            for(int i = 0; i != depth; i++)
-            {
-                // get the elements at the current depth
-                var elements = jsonValue.GetObjectsAtDepth(i);
-
-                var nodes = new List<DepthNode>();
-
-                foreach(var element in elements)
-                {
-                    // create a new json object we will use to mutate to our newer form
-                    JObject mutableElement = new();
-
-                    // enumerate over each property in the populated object and copy it to our mutable one
-                    foreach(var prop in element.Properties())
-                    {
-                        if (prop.Value is JObject jObject)
-                        {
-                            // if its a sub-object, add it to the next depth level
-                            var mapIndex = i + 1;
-
-                            // resolve the objects link type from its path
-                            var type = ResolveTypeFromPath(jsonValue.InnerType, prop.Path);
-
-                            if (depthMap[mapIndex] is null)
-                                depthMap[mapIndex] = new List<DepthNode>() 
-                                { new(type, jObject) };
-                            else
-                                depthMap[mapIndex].Add(new(type, jObject));
-
-                            // populate the mutable one with the location of the nested object
-                            mutableElement[prop.Name] = new JObject()
-                            {
-                                new JProperty($"{mappingName}_depth_index", depthMap[mapIndex].Count - 1),
-                            };
-                        }
-                        else if (prop.Value is JArray jArray && jArray.All(x => x is JObject))
-                        {
-                            // if its an array, add it to the next depth level
-                            var mapIndex = i + 1;
-
-                            // resolve the objects link type from its path
-                            var type = ResolveTypeFromPath(jsonValue.InnerType, prop.Path);
-
-                            if (depthMap[mapIndex] is null)
-                                depthMap[mapIndex] = new List<DepthNode>(jArray.Select(x => new DepthNode(type, (JObject)x)));
-                            else
-                                depthMap[mapIndex].AddRange(jArray.Select(x => new DepthNode(type, (JObject)x)));
-
-                            // populate the mutable one with the location of the nested object
-                            mutableElement[prop.Name] = new JObject()
-                            {
-                                new JProperty($"{mappingName}_depth_from", (depthMap[mapIndex].Count) - jArray.Count),
-                                new JProperty($"{mappingName}_depth_to", depthMap[mapIndex].Count)
-                            };
-                        }
-                        else
-                            mutableElement.Add(prop); // add the property if its scalar
-                    }
-
-                    // add the node to our node collection
-                    nodes.Add(new(ResolveTypeFromPath(jsonValue.InnerType, element.Path), mutableElement));
-                }
-
-                // add the nodes collection to our depth map
-                depthMap[i] = nodes;
-            }
-
+            IGrouping<int, DepthNode>[] depthMap = JsonUtils.BuildDepthMap(mappingName, jsonValue).ToArray().GroupBy(x => x.Depth).ToArray();
+                
             // generate the global maps
-            for(int i = depthMap.Length - 1; i != 0; i--)
+            for(int i = depth; i != 0; i--)
             {
                 var map = depthMap[i];
-                var node = map[0];
+                var node = map.First();
                 var iterationName = QueryUtils.GenerateRandomVariableName();
                 var variableName = QueryUtils.GenerateRandomVariableName();
                 var isLast = depthMap.Length == i + 1;
@@ -252,7 +121,7 @@ namespace EdgeDB.QueryNodes
                 RequiresIntrospection = true;
 
                 // serialize this depths values and set the variable & global for the sub-query
-                var iterationJson = JsonConvert.SerializeObject(map.Select(x => x.Node));
+                var iterationJson = JsonConvert.SerializeObject(map.Select(x => x.JsonNode));
 
                 SetVariable(variableName, new Json(iterationJson));
 
@@ -260,7 +129,7 @@ namespace EdgeDB.QueryNodes
             }
 
             // replace the json variables content with the root depth map
-            SetVariable(jsonValue.VariableName, new Json(JsonConvert.SerializeObject(depthMap[0].Select(x => x.Node))));
+            SetVariable(jsonValue.VariableName, new Json(JsonConvert.SerializeObject(depthMap[0].Select(x => x.JsonNode))));
 
             // create the base insert shape
             var shape = jsonValue.InnerType.GetEdgeDBTargetProperties(excludeId: true).Select(x =>
