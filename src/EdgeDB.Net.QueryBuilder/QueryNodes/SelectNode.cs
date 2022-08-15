@@ -29,7 +29,7 @@ namespace EdgeDB.QueryNodes
         /// <param name="type">The type to get the shape for.</param>
         /// <param name="currentDepth">The current depth of the shape.</param>
         /// <returns>The shape of the given type.</returns>
-        private string GetShape(Type type, int currentDepth = 0)
+        private string? GetShape(Type type, int currentDepth = 0)
         {
             // get all properties that dont have the 'EdgeDBIgnore' attribute
             var properties = type.GetProperties().Where(x => x.GetCustomAttribute<EdgeDBIgnoreAttribute>() == null);
@@ -44,8 +44,11 @@ namespace EdgeDB.QueryNodes
                 if (EdgeDBTypeUtils.IsLink(x.PropertyType, out var isArray, out var innerType))
                 {
                     var shapeType = isArray ? innerType! : x.PropertyType;
-                    if(currentDepth < MAX_DEPTH)
-                        return $"{name}: {GetShape(shapeType, currentDepth + 1)}";
+                    if (currentDepth < MAX_DEPTH)
+                    {
+                        var subShape = GetShape(shapeType, currentDepth + 1);
+                        return subShape is not null ? $"{name}: {subShape}" : null;
+                    }
                     return null;
                 }
                 else // return just the name
@@ -53,6 +56,10 @@ namespace EdgeDB.QueryNodes
             }).Where(x => x is not null);
 
             // join our properties by commas and wrap it in braces
+
+            if (!propertyNames.Any())
+                return null;
+
             return $"{{ {string.Join(", ", propertyNames)} }}";
         }
 
@@ -60,7 +67,7 @@ namespace EdgeDB.QueryNodes
         ///     Gets the default shape for the current contextual type.
         /// </summary>
         /// <returns>The default shape for the current contextual type.</returns>
-        private string GetDefaultShape()
+        private string? GetDefaultShape()
             => GetShape(OperatingType);
 
         /// <summary>
@@ -68,7 +75,7 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
-        private string GetShape()
+        private string? GetShape()
         {
             // if no user-defined shape was passed in, generate the default shape
             if(Context.Shape == null)

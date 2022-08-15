@@ -53,6 +53,8 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         internal List<QueryNode> SubNodes { get; } = new();
 
+        internal List<QueryGlobal> ReferencedGlobals { get; } = new();
+
         /// <summary>
         ///     Gets the query string for this node.
         /// </summary>
@@ -121,6 +123,7 @@ namespace EdgeDB.QueryNodes
         {
             var global = new QueryGlobal(name, value, reference);
             Builder.QueryGlobals.Add(global);
+            ReferencedGlobals.Add(global);
         }
 
         /// <summary>

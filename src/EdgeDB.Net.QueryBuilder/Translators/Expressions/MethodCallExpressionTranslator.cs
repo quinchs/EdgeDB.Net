@@ -55,6 +55,8 @@ namespace EdgeDB.Translators.Expressions
             {
                 switch (expression.Method.Name)
                 {
+                    case nameof(QueryContext.Global):
+                        return TranslateExpression(expression.Arguments[0], context.Enter(x => x.StringWithoutQuotes = true));
                     case nameof(QueryContext.Local):
                         {
                             // validate the type context, property should exist within the type.

@@ -58,13 +58,6 @@ namespace EdgeDB.QueryNodes
                 // build and compile our lambda to get the query builder instance
                 var builder = (IQueryBuilder)Context.Expression!.Compile().DynamicInvoke(parameters)!;
 
-                // copy the globals & variables to the current builder
-                foreach (var global in builder.Globals)
-                    SetGlobal(global.Name, global.Value, global.Reference);
-
-                foreach (var variable in builder.Variables)
-                    SetVariable(variable.Key, variable.Value);
-
                 // add all nodes as sub nodes to this node
                 SubNodes.AddRange(builder.Nodes);
 
@@ -110,9 +103,18 @@ namespace EdgeDB.QueryNodes
                 x.SchemaInfo = SchemaInfo;
                 x.FinalizeQuery();
 
+                var builtNode = x.Build();
+
+                foreach (var variable in builtNode.Parameters)
+                    SetVariable(variable.Key, variable.Value);
+
+                // copy the globals & variables to the current builder
+                foreach (var global in x.ReferencedGlobals)
+                    SetGlobal(global.Name, global.Value, global.Reference);
+
                 // we don't need to copy variables or nodes here since we did that in the parse step
-                return x.Build().Query;
-            }).Aggregate((x, y) => $"{x} {y}");
+                return builtNode.Query;
+            }).Where(x => !string.IsNullOrEmpty(x)).Aggregate((x, y) => $"{x} {y}");
 
             // append union statement's content
             Query.Append($"({iterator})");
