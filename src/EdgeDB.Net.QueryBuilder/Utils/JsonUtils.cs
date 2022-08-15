@@ -35,6 +35,7 @@ namespace EdgeDB
         /// </summary>
         /// <param name="type">The type of the node.</param>
         /// <param name="node">The node containing the value.</param>
+        /// <param name="depth">The depth of the node.</param>
         public DepthNode(Type type, JObject node, int depth)
         {
             Type = type;
