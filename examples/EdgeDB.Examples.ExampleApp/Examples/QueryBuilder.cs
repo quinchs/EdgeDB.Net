@@ -202,7 +202,7 @@ namespace EdgeDB.ExampleApp.Examples
             };
 
             var tquery = (await QueryBuilder.For(data,
-                    x => QueryBuilder.Insert(x, false)
+                    x => QueryBuilder.Insert(x)
                 ).BuildAsync(client));
 
             // Else statements (upsert demo)

@@ -34,16 +34,28 @@ namespace EdgeDB
             => new QueryBuilder<TType>().Select(shape);
 
         /// <inheritdoc cref="IQueryBuilder{TType}.Insert(TType, bool)"/>
-        public static IInsertQuery<TType> Insert<TType>(TType value, bool returnInsertedValue = true)
+        public static IInsertQuery<TType> Insert<TType>(TType value, bool returnInsertedValue)
             => new QueryBuilder<TType>().Insert(value, returnInsertedValue);
 
+        /// <inheritdoc cref="IQueryBuilder{TType}.Insert(TType)"/>
+        public static IInsertQuery<TType> Insert<TType>(TType value)
+            => new QueryBuilder<TType>().Insert(value, false);
+
         /// <inheritdoc cref="IQueryBuilder{TType}.Insert(Expression{Func{QueryContext, TType}}, bool)"/>
-        public static IInsertQuery<TType> Insert<TType>(Expression<Func<QueryContext, TType>> value, bool returnInsertedValue = true)
+        public static IInsertQuery<TType> Insert<TType>(Expression<Func<QueryContext, TType>> value, bool returnInsertedValue)
             => new QueryBuilder<TType>().Insert(value, returnInsertedValue);
-        
+
+        /// <inheritdoc cref="IQueryBuilder{TType}.Insert(Expression{Func{QueryContext, TType}})"/>
+        public static IInsertQuery<TType> Insert<TType>(Expression<Func<QueryContext, TType>> value)
+            => new QueryBuilder<TType>().Insert(value);
+
         /// <inheritdoc cref="IQueryBuilder{TType}.Update(Expression{Func{TType, TType}}, bool)"/>
-        public static IUpdateQuery<TType> Update<TType>(Expression<Func<TType, TType>> updateFunc, bool returnUpdatedValue = true)
+        public static IUpdateQuery<TType> Update<TType>(Expression<Func<TType, TType>> updateFunc, bool returnUpdatedValue)
             => new QueryBuilder<TType>().Update(updateFunc, returnUpdatedValue);
+
+        /// <inheritdoc cref="IQueryBuilder{TType}.Update(Expression{Func{TType, TType}})"/>
+        public static IUpdateQuery<TType> Update<TType>(Expression<Func<TType, TType>> updateFunc)
+            => new QueryBuilder<TType>().Update(updateFunc, false);
 
         /// <inheritdoc cref="IQueryBuilder{TType}.Delete"/>
         public static IDeleteQuery<TType> Delete<TType>()
@@ -154,12 +166,14 @@ namespace EdgeDB
             // construct the node.
             var node = (TNode)Activator.CreateInstance(typeof(TNode), builder)!;
 
+            node.Parent = parent;
+            
+            parent?.SubNodes.Add(node);
+            
             // visit the node
             node.Visit();
             
             _nodes.Add(node);
-
-            parent?.SubNodes.Add(node);
 
             return node;
         }
@@ -320,68 +334,62 @@ namespace EdgeDB
         /// <inheritdoc/>
         public IInsertQuery<TType> Insert(TType value, bool returnInsertedValue = true)
         {
-            var selectedGlobal = returnInsertedValue ? QueryUtils.GenerateRandomVariableName() : null;
             var insertNode = AddNode<InsertNode>(new InsertContext(typeof(TType))
             {
                 Value = value,
-                SetAsGlobal = returnInsertedValue,
-                GlobalName = selectedGlobal
             });
 
             if (returnInsertedValue)
             {
-                AddNode<SelectNode>(new SelectContext(typeof(TType))
-                {
-                    SelectName = selectedGlobal,
-                }, true, insertNode);
+                AddNode<SelectNode>(new SelectContext(typeof(TType)), true, insertNode);
             }
             
             return this;
         }
+
+        /// <inheritdoc/>
+        public IInsertQuery<TType> Insert(TType value)
+            => Insert(value, false);
 
         /// <inheritdoc/>
         public IInsertQuery<TType> Insert(Expression<Func<QueryContext, TType>> value, bool returnInsertedValue = true)
         {
-            var selectedGlobal = returnInsertedValue ? QueryUtils.GenerateRandomVariableName() : null;
             var insertNode = AddNode<InsertNode>(new InsertContext(typeof(TType))
             {
                 Value = value,
-                SetAsGlobal = returnInsertedValue,
-                GlobalName = selectedGlobal
             });
 
             if (returnInsertedValue)
             {
-                AddNode<SelectNode>(new SelectContext(typeof(TType))
-                {
-                    SelectName = selectedGlobal,
-                }, true, insertNode);
+                AddNode<SelectNode>(new SelectContext(typeof(TType)), true, insertNode);
             }
 
             return this;
         }
 
         /// <inheritdoc/>
-        public IUpdateQuery<TType> Update(Expression<Func<TType, TType>> updateFunc, bool returnUpdatedValue = true)
+        public IInsertQuery<TType> Insert(Expression<Func<QueryContext, TType>> value)
+            => Insert(value, false);
+
+        /// <inheritdoc/>
+        public IUpdateQuery<TType> Update(Expression<Func<TType, TType>> updateFunc, bool returnUpdatedValue)
         {
-            var selectedGlobal = returnUpdatedValue ? QueryUtils.GenerateRandomVariableName() : null;
             var updateNode = AddNode<UpdateNode>(new UpdateContext(typeof(TType))
             {
                 UpdateExpression = updateFunc,
-                SetAsGlobal = returnUpdatedValue,
-                GlobalName = selectedGlobal
             });
 
             if (returnUpdatedValue)
             {
-                AddNode<SelectNode>(new SelectContext(typeof(TType))
-                {
-                    SelectName = selectedGlobal,
-                }, true, updateNode);
+                AddNode<SelectNode>(new SelectContext(typeof(TType)), true, updateNode);
             }
             
             return this;
         }
+
+        /// <inheritdoc/>
+        public IUpdateQuery<TType> Update(Expression<Func<TType, TType>> updateFunc)
+            => Update(updateFunc, false);
 
         /// <inheritdoc/>
         public IDeleteQuery<TType> Delete
@@ -788,6 +796,13 @@ namespace EdgeDB
         ///     Gets a collection of parameters for the query.
         /// </summary>
         public IDictionary<string, object?>? Parameters { get; internal init; }
+
+        /// <summary>
+        ///     Gets a prettified version of this query.
+        /// </summary>
+        public string Pretty
+            => Prettify();
+
         internal List<QueryGlobal>? Globals { get; init; }
 
         /// <summary>

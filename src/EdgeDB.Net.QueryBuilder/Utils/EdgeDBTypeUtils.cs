@@ -80,7 +80,7 @@ namespace EdgeDB
         /// <returns>
         ///     The equivalent edgedb type.
         /// </returns>
-        public static string GetEdgeDBScalarOrTypename(Type type)
+        public static string GetEdgeDBScalarOrTypeName(Type type)
         {
             if (TryGetScalarType(type, out var info))
                 return info.ToString();
@@ -103,7 +103,9 @@ namespace EdgeDB
 
             info = null;
 
-            Type? enumerableType = type.GetInterfaces().FirstOrDefault(x => x.Name == "IEnumerable`1");
+            Type? enumerableType = ReflectionUtils.IsSubTypeOfGenericType(typeof(IEnumerable<>), type) 
+                ? type 
+                : type.GetInterfaces().FirstOrDefault(x => ReflectionUtils.IsSubTypeOfGenericType(typeof(IEnumerable<>), x));
 
             EdgeDBTypeInfo? child = null;
             var hasChild = enumerableType != null && TryGetScalarType(enumerableType.GenericTypeArguments[0], out child);
@@ -134,17 +136,17 @@ namespace EdgeDB
             innerLinkType = null;
             isMultiLink = false;
 
-            Type? enumerableType = null;
-            if (type != typeof(string) && (enumerableType = type.GetInterfaces().FirstOrDefault(x => ReflectionUtils.IsSubTypeOfGenericType(typeof(IEnumerable<>), x))) != null)
+            Type? enumerableType = ReflectionUtils.IsSubTypeOfGenericType(typeof(IEnumerable<>), type) ? type : null;
+            if (type != typeof(string) && (enumerableType is not null || (enumerableType = type.GetInterfaces().FirstOrDefault(x => ReflectionUtils.IsSubTypeOfGenericType(typeof(IEnumerable<>), x))) != null))
             {
                 innerLinkType = enumerableType.GenericTypeArguments[0];
                 isMultiLink = true;
                 var result = IsLink(innerLinkType, out _, out var linkType);
-                innerLinkType ??= linkType;
+                innerLinkType = linkType ?? innerLinkType;
                 return result;
             }
 
-            return TypeBuilder.IsValidObjectType(type);
+            return TypeBuilder.IsValidObjectType(type) && !TryGetScalarType(type, out _);
         }
     }
 }

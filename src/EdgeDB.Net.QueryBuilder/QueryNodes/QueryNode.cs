@@ -53,6 +53,14 @@ namespace EdgeDB.QueryNodes
         /// </summary>
         internal List<QueryNode> SubNodes { get; } = new();
 
+        /// <summary>
+        ///     Gets the parent node that created this node.
+        /// </summary>
+        internal QueryNode? Parent { get; set; }
+
+        /// <summary>
+        ///     Gets a collection of global variables this node references.
+        /// </summary>
         internal List<QueryGlobal> ReferencedGlobals { get; } = new();
 
         /// <summary>
@@ -75,7 +83,7 @@ namespace EdgeDB.QueryNodes
         /// <summary>
         ///     The operating type within the context of the query builder.
         /// </summary>
-        protected readonly Type OperatingType;
+        public readonly Type OperatingType;
 
         /// <summary>
         ///     Constructs a new query node with the given builder.

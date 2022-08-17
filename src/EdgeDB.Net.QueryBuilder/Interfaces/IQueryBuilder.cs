@@ -86,7 +86,14 @@ namespace EdgeDB
         ///     whether or not to implicitly add a select statement to return the inserted value.
         /// </param>
         /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
-        IInsertQuery<TType> Insert(TType value, bool returnInsertedValue = true);
+        IInsertQuery<TType> Insert(TType value, bool returnInsertedValue);
+
+        /// <summary>
+        ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
+        /// </summary>
+        /// <param name="value">The value to insert.</param>
+        /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
+        IInsertQuery<TType> Insert(TType value);
 
         /// <summary>
         ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
@@ -96,7 +103,14 @@ namespace EdgeDB
         ///     whether or not to implicitly add a select statement to return the inserted value.
         /// </param>
         /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
-        IInsertQuery<TType> Insert(Expression<Func<QueryContext, TType>> value, bool returnInsertedValue = true);
+        IInsertQuery<TType> Insert(Expression<Func<QueryContext, TType>> value, bool returnInsertedValue);
+
+        /// <summary>
+        ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
+        /// </summary>
+        /// <param name="value">The callback containing the value initialization to insert.</param>
+        /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
+        IInsertQuery<TType> Insert(Expression<Func<QueryContext, TType>> value);
 
         /// <summary>
         ///     Adds a <c>UPDATE</c> statement updating an instance of <typeparamref name="TType"/>.
@@ -108,7 +122,16 @@ namespace EdgeDB
         ///     whether or not to implicitly add a select statement to return the inserted value.
         /// </param>
         /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
-        IUpdateQuery<TType> Update(Expression<Func<TType, TType>> updateFunc, bool returnUpdatedValue = true);
+        IUpdateQuery<TType> Update(Expression<Func<TType, TType>> updateFunc, bool returnUpdatedValue);
+
+        /// <summary>
+        ///     Adds a <c>UPDATE</c> statement updating an instance of <typeparamref name="TType"/>.
+        /// </summary>
+        /// <param name="updateFunc">
+        ///     The callback used to update <typeparamref name="TType"/>. The first parameter is the old value.
+        /// </param>
+        /// <returns>A <see cref="IInsertQuery{TType}"/>.</returns>
+        IUpdateQuery<TType> Update(Expression<Func<TType, TType>> updateFunc);
 
         /// <summary>
         ///     Adds a <c>DELETE</c> statement deleting an instance of <typeparamref name="TType"/>.
