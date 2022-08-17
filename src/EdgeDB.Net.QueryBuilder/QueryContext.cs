@@ -13,7 +13,7 @@ namespace EdgeDB
     /// <summary>
     ///     Represents context used within query functions.
     /// </summary>
-    public sealed class QueryContext
+    public class QueryContext
     {
         /// <summary>
         ///     References a defined query global given a name.
@@ -221,6 +221,19 @@ namespace EdgeDB
         /// <returns>A mock collection of <typeparamref name="TType"/>.</returns>
         public TCollection SubQuery<TType, TCollection>(IMultiCardinalityQuery<TType> query)
             where TCollection : IEnumerable<TType>
+            => default!;
+    }
+
+    /// <summary>
+    ///     Represents context used within query functions containing a variable type.
+    /// </summary>
+    /// <typeparam name="TVariables">The type containing the variables defined in the query.</typeparam>
+    public abstract class QueryContext<TVariables> : QueryContext
+    {
+        /// <summary>
+        ///     Gets a collection of variables defined in a with block.
+        /// </summary>
+        public TVariables Variables
             => default!;
     }
 }

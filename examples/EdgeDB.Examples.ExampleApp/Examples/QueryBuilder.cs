@@ -62,6 +62,11 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
+            var test = QueryBuilder<ArrayPerson>
+                .With(new { Test = "test!" })
+                .Select(ctx => ctx.Variables.Test)
+                .Build();
+
             var t = QueryBuilder
                 .Select<ConstraintPerson>()
                 .Group((person, builder) =>
