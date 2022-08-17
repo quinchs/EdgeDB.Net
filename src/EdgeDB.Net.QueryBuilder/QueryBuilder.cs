@@ -349,7 +349,7 @@ namespace EdgeDB
             return EnterNewType<TResult>();
         }
 
-        /// <inheritdoc cref="IQueryBuilder{TType}.Select(Expression{Func{QueryContext, TType}})"/>
+        /// <inheritdoc cref="IQueryBuilder{TType, TContext}.Select(Expression{Func{TContext, TType}})"/>
         public ISelectQuery<TType, TContext> Select(Expression<Func<TContext, TType?>> shape)
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType))
@@ -360,7 +360,7 @@ namespace EdgeDB
             return this;
         }
 
-        /// <inheritdoc cref="IQueryBuilder{TType}.Select{TNewType}(Expression{Func{QueryContext, TNewType}})"/>
+        /// <inheritdoc cref="IQueryBuilder{TNewType, TContext}.Select{TNewType}(Expression{Func{TContext, TNewType}})"/>
         public ISelectQuery<TNewType, TContext> Select<TNewType>(Expression<Func<TContext, TNewType?>> shape)
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType))
