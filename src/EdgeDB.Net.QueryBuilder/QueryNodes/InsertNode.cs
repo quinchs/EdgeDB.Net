@@ -1,4 +1,5 @@
 ﻿using EdgeDB.DataTypes;
+using EdgeDB.Schema;
 using EdgeDB.Serializer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -19,6 +20,159 @@ namespace EdgeDB.QueryNodes
     /// </summary>
     internal class InsertNode : QueryNode<InsertContext>
     {
+        /// <summary>
+        ///     A readonly struct representing a setter in an insert shape.
+        /// </summary>
+        private readonly struct ShapeSetter
+        {
+            /// <summary>
+            ///     Whether or not the setter requires introspection.
+            /// </summary>
+            public readonly bool RequiresIntrospection;
+
+            /// <summary>
+            ///     A string-based setter.
+            /// </summary>
+            private readonly string? _setter;
+
+            /// <summary>
+            ///     A function-based setter which requires introspection.
+            /// </summary>
+            private readonly Func<SchemaInfo, string?>? _setterBuilder;
+
+            /// <summary>
+            ///     Constructs a new <see cref="ShapeSetter"/>.
+            /// </summary>
+            /// <param name="setter">A string-based setter.</param>
+            public ShapeSetter(string setter)
+            {
+                _setter = setter;
+                _setterBuilder = null;
+                RequiresIntrospection = false;
+            }
+
+            /// <summary>
+            ///     Constructs a new <see cref="ShapeSetter"/>.
+            /// </summary>
+            /// <param name="builder">A function-based setter that requires introspection.</param>
+            public ShapeSetter(Func<SchemaInfo, string?> builder)
+            {
+                _setterBuilder = builder;
+                _setter = null;
+                RequiresIntrospection = true;
+            }
+
+            /// <summary>
+            ///     Converts this <see cref="ShapeSetter"/> to a string form without introspection.
+            /// </summary>
+            /// <returns>A stringified edgeql setter.</returns>
+            /// <exception cref="InvalidOperationException">
+            ///     The current setter requires introspection.
+            /// </exception>
+            public override string ToString()
+            {
+                if (_setter is null)
+                    throw new InvalidOperationException("Cannot build insert setter, a setter requires introspection");
+                return _setter;
+            }
+
+            /// <summary>
+            ///     Converts this <see cref="ShapeSetter"/> to a string form with introspection.
+            /// </summary>
+            /// <param name="info">The introspected schema info.</param>
+            /// <returns>A stringified edgeql setter.</returns>
+            public string? ToString(SchemaInfo info)
+            {
+                return RequiresIntrospection && _setterBuilder is not null
+                    ? _setterBuilder(info)
+                    : ToString();
+            }
+
+            public static implicit operator ShapeSetter(string s) => new(s);
+            public static implicit operator ShapeSetter(Func<SchemaInfo, string?> s) => new(s);
+        }
+
+        /// <summary>
+        ///     Represents a insert shape definition.
+        /// </summary>
+        private readonly struct ShapeDefinition
+        {
+            /// <summary>
+            ///     Whether or not the setter requires introspection.
+            /// </summary>
+            public readonly bool RequiresIntrospection;
+            
+            /// <summary>
+            ///     The raw string form shape definition, if any.
+            /// </summary>
+            private readonly string? _rawShape;
+
+            /// <summary>
+            ///     The setters in this shape definition.
+            /// </summary>
+            private readonly IEnumerable<ShapeSetter> _shape;
+
+            /// <summary>
+            ///     Constructs a new <see cref="ShapeDefinition"/> with the given shape body.
+            /// </summary>
+            /// <param name="shape"></param>
+            public ShapeDefinition(string shape)
+            {
+                _rawShape = shape;
+                _shape = Array.Empty<ShapeSetter>();
+                RequiresIntrospection = false;
+            }
+
+            /// <summary>
+            ///     Constructs a new <see cref="ShapeDefinition"/> with the given shape body.
+            /// </summary>
+            /// <param name="shape"></param>
+            public ShapeDefinition(IEnumerable<ShapeSetter> shape)
+            {
+                _shape = shape;
+                _rawShape = null;
+                RequiresIntrospection = shape.Any(x => x.RequiresIntrospection);
+            }
+
+            /// <summary>
+            ///     Builds this <see cref="ShapeDefinition"/> into the string form without using introspection.
+            /// </summary>
+            /// <returns>The string form of the shape definition.</returns>
+            /// <exception cref="InvalidOperationException">The shape body requires introspection to build.</exception>
+            public string Build()
+            {
+                if (_rawShape is not null)
+                    return _rawShape;
+
+                if (_shape.Any(x => x.RequiresIntrospection))
+                    throw new InvalidOperationException("Cannot build insert shape, some properties require introspection");
+
+                return $"{{ {string.Join(", ", _shape)} }}";
+            }
+
+            /// <summary>
+            ///     Builds this <see cref="ShapeDefinition"/> into a string using schema introspection.
+            /// </summary>
+            /// <param name="info">The schema introspection info.</param>
+            /// <returns>The string form of the shape definition.</returns>
+            public string Build(SchemaInfo info)
+            {
+                if (_rawShape is not null)
+                    return _rawShape;
+
+                return RequiresIntrospection
+                    ? $"{{ {string.Join(", ", _shape.Select(x => x.ToString(info)).Where(x => x is not null))} }}"
+                    : Build();
+            }
+
+            public static implicit operator ShapeDefinition(string shape) => new ShapeDefinition(shape);
+        }
+
+        /// <summary>
+        ///     The insert shape definition.
+        /// </summary>
+        private ShapeDefinition _shape;
+
         /// <summary>
         ///     Whether or not to autogenerate the unless conflict clause.
         /// </summary>
@@ -41,13 +195,60 @@ namespace EdgeDB.QueryNodes
             _elseStatement = new();
         }
 
+        /// <inheritdoc/>
+        public override void Visit()
+        {
+            // add the current type to the sub query map
+            _subQueryMap.Add(OperatingType);
+
+            // build the insert shape
+            _shape = Context.IsJsonVariable 
+                ? BuildJsonShape() 
+                : BuildInsertShape();
+
+            RequiresIntrospection = _shape.RequiresIntrospection;
+        }
+
+        /// <inheritdoc/>
+        public override void FinalizeQuery()
+        {
+            // build the shape with introspection
+            var shape = SchemaInfo is not null 
+                ? _shape.Build(SchemaInfo) 
+                : _shape.Build();
+
+            // prepend it to our query string
+            Query.Insert(0, $"insert {OperatingType.GetEdgeDBTypeName()} {shape}");
+
+            // if we require autogeneration of the unless conflict statement
+            if (_autogenerateUnlessConflict)
+            {
+                if (SchemaInfo is null)
+                    throw new NotSupportedException("Cannot use autogenerated unless conflict on without schema interpolation");
+
+                if (!SchemaInfo.TryGetObjectInfo(OperatingType, out var typeInfo))
+                    throw new NotSupportedException($"Could not find type info for {OperatingType}");
+
+                Query.Append($" {ConflictUtils.GenerateExclusiveConflictStatement(typeInfo, _elseStatement.Length != 0)}");
+            }
+            
+            Query.Append(_elseStatement);
+
+            // if the query builder wants this node as a global
+            if (Context.SetAsGlobal && Context.GlobalName != null)
+            {
+                SetGlobal(Context.GlobalName, new SubQuery($"({Query})"), null);
+                Query.Clear();
+            }
+        }
+
         /// <summary>
-        ///     Builds a json-based insert shape
+        ///     Builds a json-based insert shape.
         /// </summary>
         /// <returns>
         ///     The insert shape for a json-based value.
         /// </returns>
-        private string BuildJsonShape()
+        private ShapeDefinition BuildJsonShape()
         {
             var mappingName = QueryUtils.GenerateRandomVariableName();
             var jsonValue = (IJsonVariable)Context.Value!;
@@ -55,9 +256,9 @@ namespace EdgeDB.QueryNodes
 
             // create a depth map that contains each nested level of types to be inserted
             IGrouping<int, DepthNode>[] depthMap = JsonUtils.BuildDepthMap(mappingName, jsonValue).ToArray().GroupBy(x => x.Depth).ToArray();
-                
+
             // generate the global maps
-            for(int i = depth; i != 0; i--)
+            for (int i = depth; i != 0; i--)
             {
                 var map = depthMap[i];
                 var node = map.First();
@@ -67,19 +268,40 @@ namespace EdgeDB.QueryNodes
 
                 // IMPORTANT: since we're using 'i' within the callback, we must
                 // store a local here so we dont end up calling the last iterations 'i' value
-                var indexCopy = i; 
+                var indexCopy = i;
 
                 // generate a introspection-dependant sub query for the insert or select
                 var query = new SubQuery((info) =>
                 {
                     var allProps = QueryGenerationUtils.GetProperties(info, node.Type);
                     var typeName = node.Type.GetEdgeDBTypeName();
+                    var infoCopy = info;
 
                     // define the insert shape
                     var shape = allProps.Select(x =>
                     {
                         var edgedbName = x.GetEdgeDBPropertyName();
-                        
+                        var isScalar = EdgeDBTypeUtils.TryGetScalarType(x.PropertyType, out var edgeqlType);
+
+                        // we need to add a callback for value types that are default to determine if we need to 
+                        // add the setter
+                        if (isScalar && x.PropertyType.IsValueType && !x.PropertyType.IsEnum)
+                        {
+                            if (!infoCopy.TryGetObjectInfo(jsonValue.InnerType, out var info))
+                                throw new InvalidOperationException($"Could not find {jsonValue.InnerType.GetEdgeDBTypeName()} in schema info!");
+
+                            // get the property defined in the schema
+                            var edgedbProp = info.Properties!.FirstOrDefault(x => x.Name == edgedbName);
+
+                            if (edgedbProp is null)
+                                throw new InvalidOperationException($"Could not find property '{edgedbName}' on type {jsonValue.InnerType.GetEdgeDBTypeName()}");
+
+                            if (edgedbProp.Required && !edgedbProp.HasDefault)
+                                return $"{edgedbName} := <{edgeqlType}>json_get({jsonValue.Name}, '{x.Name}')";
+
+                            return null;
+                        }
+
                         // if its a link, add a ternary statement for pulling the value out of a sub-map
                         if (EdgeDBTypeUtils.IsLink(x.PropertyType, out var isArray, out _))
                         {
@@ -90,18 +312,17 @@ namespace EdgeDB.QueryNodes
                                 return $"{edgedbName} := {{}}";
 
                             // return a slice operator for multi links or a index operator for single links
-                            return isArray 
-                                ? $"{edgedbName} := distinct array_unpack({mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_from') ?? 0:<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_to') ?? 0])" 
+                            return isArray
+                                ? $"{edgedbName} := distinct array_unpack({mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_from') ?? 0:<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_to') ?? 0])"
                                 : $"{edgedbName} := {mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({iterationName}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
                         }
 
                         // if its a scalar type, use json_get to pull the value and cast it to our property
                         // type
-                        if (!EdgeDBTypeUtils.TryGetScalarType(x.PropertyType, out var edgeqlType))
+                        if (!isScalar)
                             throw new NotSupportedException($"Cannot use type {x.PropertyType} as there is no serializer for it");
 
                         return $"{edgedbName} := <{edgeqlType}>json_get({iterationName}, '{x.Name}')";
-
                     });
 
                     // generate the 'insert .. unless conflict .. else select' query
@@ -135,6 +356,30 @@ namespace EdgeDB.QueryNodes
             var shape = jsonValue.InnerType.GetEdgeDBTargetProperties(excludeId: true).Select(x =>
             {
                 var edgedbName = x.GetEdgeDBPropertyName();
+                var isScalar = EdgeDBTypeUtils.TryGetScalarType(x.PropertyType, out var edgeqlType);
+
+                // we need to add a callback for value types that are default to determine if we need to 
+                // add the setter
+                if (isScalar && x.PropertyType.IsValueType && !x.PropertyType.IsEnum)
+                {
+                    // we should include the setter based on the schema
+                    return new ShapeSetter(s =>
+                    {
+                        if (!s.TryGetObjectInfo(jsonValue.InnerType, out var info))
+                            throw new InvalidOperationException($"Could not find {jsonValue.InnerType.GetEdgeDBTypeName()} in schema info!");
+
+                        // get the property defined in the schema
+                        var edgedbProp = info.Properties!.FirstOrDefault(x => x.Name == edgedbName);
+
+                        if (edgedbProp is null)
+                            throw new InvalidOperationException($"Could not find property '{edgedbName}' on type {jsonValue.InnerType.GetEdgeDBTypeName()}");
+
+                        if (edgedbProp.Required && !edgedbProp.HasDefault)
+                            return $"{edgedbName} := <{edgeqlType}>json_get({jsonValue.Name}, '{x.Name}')";
+
+                        return null;
+                    });
+                }
 
                 // if its a link, add a ternary statement for pulling the value out of a sub-map
                 if (EdgeDBTypeUtils.IsLink(x.PropertyType, out var isArray, out _))
@@ -147,14 +392,14 @@ namespace EdgeDB.QueryNodes
 
                 // if its a scalar type, use json_get to pull the value and cast it to our property
                 // type
-                if (!EdgeDBTypeUtils.TryGetScalarType(x.PropertyType, out var edgeqlType))
+                if (!isScalar)
                     throw new NotSupportedException($"Cannot use type {x.PropertyType} as there is no serializer for it");
 
                 return $"{edgedbName} := <{edgeqlType}>json_get({jsonValue.Name}, '{x.Name}')";
             });
 
             // return out our insert shape
-            return $"{{ {string.Join(", ", shape)} }}";
+            return new ShapeDefinition(shape);
         }
 
         /// <summary>
@@ -166,10 +411,10 @@ namespace EdgeDB.QueryNodes
         /// <exception cref="InvalidOperationException">
         ///     No serialization method could be found for a property.
         /// </exception>
-        private string BuildInsertShape(Type? shapeType = null, object? shapeValue = null)
+        private ShapeDefinition BuildInsertShape(Type? shapeType = null, object? shapeValue = null)
         {
-            List<string> shape = new();
-            
+            List<ShapeSetter> setters = new();
+
             // use the provide shape and value if they're not null, otherwise
             // use the ones defined in context
             var type = shapeType ?? OperatingType;
@@ -180,24 +425,55 @@ namespace EdgeDB.QueryNodes
                 return $"{{ {ExpressionTranslator.Translate(expression, Builder.QueryVariables, Context, Builder.QueryGlobals)} }}";
 
             // get all properties that aren't marked with the EdgeDBIgnore attribute
-            var properties = type.GetEdgeDBTargetProperties(excludeId: true);
+            var properties = type.GetEdgeDBTargetProperties();
 
-            foreach(var property in properties)
+            foreach (var property in properties)
             {
                 // define the type and whether or not it's a link
                 var propType = property.PropertyType;
-                var isLink = EdgeDBTypeUtils.IsLink(property.PropertyType, out var isArray, out var innerType);
-                
+                var propValue = property.GetValue(value);
+                var isScalar = EdgeDBTypeUtils.TryGetScalarType(propType, out var edgeqlType);
+
                 // get the equivalent edgedb property name
                 var propertyName = property.GetEdgeDBPropertyName();
                 
+                // if its a default value of a struct, ignore it.
+                if (isScalar && propType.IsValueType && !propType.IsEnum && (propValue?.Equals(ReflectionUtils.GetValueTypeDefault(propType)) ?? false))
+                {
+                    setters.Add(new(s =>
+                    {
+                        // get the object type from the schema
+                        if (!s.TryGetObjectInfo(type!, out var info))
+                            throw new InvalidOperationException($"Could not find {type!.GetEdgeDBTypeName()} in schema info!");
+
+                        // get the property defined in the schema
+                        var edgedbProp = info.Properties!.FirstOrDefault(x => x.Name == propertyName);
+
+                        if (edgedbProp is null)
+                            throw new InvalidOperationException($"Could not find property '{propertyName}' on type {type!.GetEdgeDBTypeName()}");
+
+                        // if its required and it doesn't have a default value, set it
+                        if (edgedbProp.Required && !edgedbProp.HasDefault)
+                        {
+                            var varName = QueryUtils.GenerateRandomVariableName();
+                            SetVariable(varName, propValue);
+                            return $"{propertyName} := <{edgeqlType}>${varName}";
+                        }
+
+                        return null;
+                    }));
+                    continue;
+                }
+
+                var isLink = EdgeDBTypeUtils.IsLink(property.PropertyType, out var isArray, out var innerType);
+
                 // if a scalar type is found for the property type
-                if(EdgeDBTypeUtils.TryGetScalarType(propType, out var edgeqlType))
+                if (isScalar)
                 {
                     // set it as a variable and continue the iteration
                     var varName = QueryUtils.GenerateRandomVariableName();
                     SetVariable(varName, property.GetValue(value));
-                    shape.Add($"{propertyName} := <{edgeqlType}>${varName}");
+                    setters.Add($"{propertyName} := <{edgeqlType}>${varName}");
                     continue;
                 }
 
@@ -209,7 +485,7 @@ namespace EdgeDB.QueryNodes
 
                     // if its null we can append an empty set
                     if (subValue is null)
-                        shape.Add($"{propertyName} := {{}}");
+                        setters.Add($"{propertyName} := {{}}");
                     else if (isArray) // if its a multi link
                     {
                         List<string> subShape = new();
@@ -221,10 +497,10 @@ namespace EdgeDB.QueryNodes
                         }
 
                         // append the sub-shape
-                        shape.Add($"{propertyName} := {{ {string.Join(", ", subShape)} }}");
+                        setters.Add($"{propertyName} := {{ {string.Join(", ", subShape)} }}");
                     }
                     else // generate the link resolver and append it
-                        shape.Add($"{propertyName} := {BuildLinkResolver(propType, subValue)}");
+                        setters.Add($"{propertyName} := {BuildLinkResolver(propType, subValue)}");
 
                     continue;
                 }
@@ -232,7 +508,7 @@ namespace EdgeDB.QueryNodes
                 throw new InvalidOperationException($"Failed to find method to serialize the property \"{property.PropertyType.Name}\" on type {type.Name}");
             }
 
-            return $"{{ {string.Join(", ", shape)} }}";
+            return new ShapeDefinition(setters);
         }
 
         /// <summary>
@@ -261,7 +537,7 @@ namespace EdgeDB.QueryNodes
             else
             {
                 RequiresIntrospection = true;
-             
+
                 // add a insert select statement
                 return InlineOrGlobal(type, new SubQuery((info) =>
                 {
@@ -298,43 +574,6 @@ namespace EdgeDB.QueryNodes
                 : value.ToString()!;
         }
 
-        /// <inheritdoc/>
-        public override void Visit()
-        {
-            // add the current type to the sub query map
-            _subQueryMap.Add(OperatingType);
-
-            // build the insert shape
-            var shape = Context.IsJsonVariable ? BuildJsonShape() : BuildInsertShape();
-
-            // append it to our query
-            Query.Append($"insert {OperatingType.GetEdgeDBTypeName()} {shape}");
-        }
-
-        /// <inheritdoc/>
-        public override void FinalizeQuery()
-        {
-            // if we require autogeneration of the unless conflict statement
-            if(_autogenerateUnlessConflict)
-            {
-                if (SchemaInfo is null)
-                    throw new NotSupportedException("Cannot use autogenerated unless conflict on without schema interpolation");
-
-                if (!SchemaInfo.TryGetObjectInfo(OperatingType, out var typeInfo))
-                    throw new NotSupportedException($"Could not find type info for {OperatingType}");
-
-                Query.Append($" {ConflictUtils.GenerateExclusiveConflictStatement(typeInfo, _elseStatement.Length != 0)}");
-            }
-            
-            Query.Append(_elseStatement);
-
-            // if the query builder wants this node as a global
-            if (Context.SetAsGlobal && Context.GlobalName != null)
-            {
-                SetGlobal(Context.GlobalName, new SubQuery($"({Query})"), null);
-                Query.Clear();
-            }
-        }
 
         /// <summary>
         ///     Adds a unless conflict on (...) statement to the insert node

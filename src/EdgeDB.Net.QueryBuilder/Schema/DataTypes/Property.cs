@@ -40,6 +40,11 @@ namespace EdgeDB.Schema.DataTypes
         public bool IsLink { get; set; }
 
         /// <summary>
+        ///     Gets or sets whether or not the property is required.
+        /// </summary>
+        public bool Required { get; set; }
+
+        /// <summary>
         ///     Gets or sets whether or not this property is exclusive
         /// </summary>
         public bool IsExclusive { get; set; }

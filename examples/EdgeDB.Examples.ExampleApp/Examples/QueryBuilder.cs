@@ -62,6 +62,12 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
+            var test2 = await QueryBuilder.Insert(new LinkPerson
+            {
+                Name = "Test",
+                Email = "test"
+            }).BuildAsync(client);
+
             var test = QueryBuilder
                 .With(new { Test = "test!" })
                 .Select(ctx => ctx.Variables.Test)

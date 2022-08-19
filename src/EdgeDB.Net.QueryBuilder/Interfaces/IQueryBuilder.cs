@@ -89,6 +89,10 @@ namespace EdgeDB
         /// <summary>
         ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
         /// </summary>
+        /// <remarks>
+        ///     This statement requires introspection when <typeparamref name="TType"/> contains a 
+        ///     property thats a <see cref="ValueType"/>.
+        /// </remarks>
         /// <param name="value">The value to insert.</param>
         /// <param name="returnInsertedValue">
         ///     whether or not to implicitly add a select statement to return the inserted value.
@@ -99,6 +103,10 @@ namespace EdgeDB
         /// <summary>
         ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
         /// </summary>
+        /// <remarks>
+        ///     This statement requires introspection when <typeparamref name="TType"/> contains a 
+        ///     property thats a <see cref="ValueType"/>.
+        /// </remarks>
         /// <param name="value">The value to insert.</param>
         /// <returns>A <see cref="IInsertQuery{TType, TContext}"/>.</returns>
         IInsertQuery<TType, TContext> Insert(TType value);
@@ -106,6 +114,10 @@ namespace EdgeDB
         /// <summary>
         ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
         /// </summary>
+        /// <remarks>
+        ///     This statement requires introspection when <typeparamref name="TType"/> contains a 
+        ///     property thats a <see cref="ValueType"/>.
+        /// </remarks>
         /// <param name="value">The callback containing the value initialization to insert.</param>
         /// <param name="returnInsertedValue">
         ///     whether or not to implicitly add a select statement to return the inserted value.
@@ -116,6 +128,10 @@ namespace EdgeDB
         /// <summary>
         ///     Adds a <c>INSERT</c> statement inserting an instance of <typeparamref name="TType"/>.
         /// </summary>
+        /// <remarks>
+        ///     This statement requires introspection when <typeparamref name="TType"/> contains a 
+        ///     property thats a <see cref="ValueType"/>.
+        /// </remarks>
         /// <param name="value">The callback containing the value initialization to insert.</param>
         /// <returns>A <see cref="IInsertQuery{TType, TContext}"/>.</returns>
         IInsertQuery<TType, TContext> Insert(Expression<Func<TContext, TType>> value);
