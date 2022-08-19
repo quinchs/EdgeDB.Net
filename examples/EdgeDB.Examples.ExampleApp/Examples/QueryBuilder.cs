@@ -62,27 +62,6 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
-            var test2 = await QueryBuilder.Insert(new LinkPerson
-            {
-                Name = "Test",
-                Email = "test"
-            }).BuildAsync(client);
-
-            var test = QueryBuilder
-                .With(new { Test = "test!" })
-                .Select(ctx => ctx.Variables.Test)
-                .Build();
-
-            var t = QueryBuilder
-                .Select<ConstraintPerson>()
-                .Group((person, builder) =>
-                    builder.Using(() => new
-                    {
-                        Test = "Test"
-                    })
-                    .By(x => x.Test)
-                );
-
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 

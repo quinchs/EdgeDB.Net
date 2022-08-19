@@ -313,9 +313,32 @@ namespace EdgeDB
             if (!typeof(TVariables).IsAnonymousType())
                 throw new ArgumentException("Variables must be an anonymous type");
 
-            // add the variables to our query variables
-            foreach (var variable in typeof(TVariables).GetProperties())
-                _queryGlobals.Add(new QueryGlobal(variable.Name, variable.GetValue(variables)));
+            // add the properties to our query variables & globals
+            foreach (var property in typeof(TVariables).GetProperties())
+            {
+                var value = property.GetValue(variables);
+                // if its scalar, just add it as a query variable
+                if (EdgeDBTypeUtils.TryGetScalarType(property.PropertyType, out var scalarInfo))
+                {
+                    var varName = QueryUtils.GenerateRandomVariableName();
+                    _queryVariables.Add(varName, value);
+                    _queryGlobals.Add(new QueryGlobal(property.Name, new SubQuery($"<{scalarInfo}>${varName}")));
+                }
+                else if (property.PropertyType.IsAssignableTo(typeof(IQueryBuilder)))
+                {
+                    // add it as a sub-query
+                    _queryGlobals.Add(new QueryGlobal(property.Name, value));
+                }
+                else if(
+                    EdgeDBTypeUtils.IsLink(property.PropertyType, out var isMultiLink, out var innerType) 
+                    && !isMultiLink
+                    && QueryObjectManager.TryGetObjectId(value, out var id))
+                {
+                    _queryGlobals.Add(new QueryGlobal(property.Name, new SubQuery($"(select {property.PropertyType.GetEdgeDBTypeName()} filter .id = <uuid>'{id}')")));
+                }
+                else 
+                    throw new InvalidOperationException($"Cannot serialize {property.Name}: No serialization strategy found for {property.PropertyType}");
+            }
 
             return EnterNewContext<QueryContext<TVariables>>();
         }
@@ -365,7 +388,8 @@ namespace EdgeDB
         {
             AddNode<SelectNode>(new SelectContext(typeof(TType))
             {
-                Shape = shape
+                Shape = shape,
+                IsFreeObject = typeof(TNewType).IsAnonymousType(),
             });
             return EnterNewType<TNewType>();
         }

@@ -28,7 +28,7 @@ namespace EdgeDB.Translators.Expressions
                     case MemberExpression when isLink:
                         {
                             var disassembled = ExpressionUtils.DisassembleExpression(Expression).ToArray();
-                            if(disassembled.Last() is ConstantExpression constant && disassembled[disassembled.Length - 2] is MemberExpression constParent)
+                            if (disassembled.Last() is ConstantExpression constant && disassembled[disassembled.Length - 2] is MemberExpression constParent)
                             {
                                 // get the value
                                 var memberValue = constParent.Member.GetMemberValue(constant.Value);
@@ -63,6 +63,13 @@ namespace EdgeDB.Translators.Expressions
                                 }), null);
                                 initializations.Add($"{memberName} := {name}");
                             }
+                            else if (disassembled.Last().Type.IsAssignableTo(typeof(QueryContext)))
+                            {
+                                var translated = ExpressionTranslator.ContextualTranslate(Expression, context);
+                                initializations.Add($"{memberName} := {translated}");
+                            }
+                            else
+                                throw new InvalidOperationException($"Cannot translate {Expression}");
                         }
                         break;
                     case MemberInitExpression or NewExpression:
