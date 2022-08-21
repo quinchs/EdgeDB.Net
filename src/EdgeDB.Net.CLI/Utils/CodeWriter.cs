@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace EdgeDB.DotnetTool
+namespace EdgeDB.CLI
 {
 	internal class CodeWriter
 	{
 		public readonly StringBuilder Content = new();
-
 		public int IndentLevel { get; private set; }
-
+		
 		private readonly ScopeTracker _scopeTracker; //We only need one. It can be reused.
 
 		public CodeWriter()
@@ -41,7 +38,8 @@ namespace EdgeDB.DotnetTool
 			return _scopeTracker;
 		}
 
-		public void EndLine() => Content.AppendLine();
+		public void EndLine() 
+			=> Content.AppendLine();
 
 		public void EndScope()
 		{
@@ -61,7 +59,6 @@ namespace EdgeDB.DotnetTool
 			{
 				Parent = parent;
 			}
-
 			public CodeWriter Parent { get; }
 
 			public void Dispose()

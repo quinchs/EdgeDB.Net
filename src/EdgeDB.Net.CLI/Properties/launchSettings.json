@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "EdgeDB.Net.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "generate"
+    }
+  }
+}

@@ -4,10 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EdgeDB.DotnetTool
+namespace EdgeDB.CLI;
+
+internal class CSharpLanguageWriter : ILanguageWriter
 {
-    internal interface ICommand
-    {
-        void Execute();
-    }
 }
