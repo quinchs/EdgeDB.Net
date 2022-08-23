@@ -35,6 +35,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EdgeDB.Examples.ExampleTODO
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EdgeDB.Net.CLI", "src\EdgeDB.Net.CLI\EdgeDB.Net.CLI.csproj", "{77D1980E-9835-4D16-B7B4-6CB5A4BD570C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EdgeDB.Generated", "EdgeDB.Generated\EdgeDB.Generated.csproj", "{A7F2328A-F2CE-43AB-99A3-41413BB735F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -85,6 +87,10 @@ Global
 		{77D1980E-9835-4D16-B7B4-6CB5A4BD570C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77D1980E-9835-4D16-B7B4-6CB5A4BD570C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{77D1980E-9835-4D16-B7B4-6CB5A4BD570C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7F2328A-F2CE-43AB-99A3-41413BB735F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7F2328A-F2CE-43AB-99A3-41413BB735F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7F2328A-F2CE-43AB-99A3-41413BB735F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7F2328A-F2CE-43AB-99A3-41413BB735F6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

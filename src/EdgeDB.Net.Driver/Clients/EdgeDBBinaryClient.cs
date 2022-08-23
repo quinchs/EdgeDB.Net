@@ -159,12 +159,17 @@ namespace EdgeDB
             public readonly CodecInfo InCodec;
             public readonly CodecInfo OutCodec;
             public readonly IDictionary<string, object?> State;
+            public readonly Cardinality Cardinality;
+            public readonly Capabilities Capabilities;
 
-            public ParseResult(CodecInfo inCodec, CodecInfo outCodec, IDictionary<string, object?> state)
+            public ParseResult(CodecInfo inCodec, CodecInfo outCodec, IDictionary<string, object?> state, 
+                Cardinality cardinality, Capabilities capabilities)
             {
                 InCodec = inCodec;
                 OutCodec = outCodec;
                 State = state;
+                Cardinality = cardinality;
+                Capabilities = capabilities;
             }
         }
 
@@ -307,6 +312,9 @@ namespace EdgeDB
                                     CodecBuilder.BuildCodec(descriptor.InputTypeDescriptorId, descriptor.InputTypeDescriptorBuffer));
 
                                 CodecBuilder.UpdateKeyMap(cacheKey, descriptor.InputTypeDescriptorId, descriptor.OutputTypeDescriptorId);
+
+                                cardinality = descriptor.Cardinality;
+                                capabilities = descriptor.Capabilities;
                             }
                             break;
                         case StateDataDescription stateDescriptor:
@@ -348,7 +356,7 @@ namespace EdgeDB
                     throw new MissingCodecException("Couldn't find a valid input codec");
             }
 
-            return new ParseResult(inCodecInfo, outCodecInfo, serializedState);
+            return new ParseResult(inCodecInfo, outCodecInfo, serializedState, cardinality, capabilities ?? Capabilities.ReadOnly);
         }
 
         /// <inheritdoc/>

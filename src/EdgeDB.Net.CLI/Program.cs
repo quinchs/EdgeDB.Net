@@ -1,5 +1,4 @@
-﻿// load commands
-using CommandLine;
+﻿using CommandLine;
 using CommandLine.Text;
 using EdgeDB.CLI;
 
@@ -12,15 +11,30 @@ var parser = new Parser(x =>
 
 var result = parser.ParseArguments(args, commands.ToArray());
 
-var commandResult = await result.WithParsedAsync<ICommand>(x => x.ExecuteAsync());
-
-var helpText = HelpText.AutoBuild(commandResult, h =>
+try
 {
-    h.AdditionalNewLineAfterOption = true;
-    h.Heading = "EdgeDB.Net CLI";
-    h.Copyright = "Copyright (c) 2022 EdgeDB";
+    var commandResult = await result.WithParsedAsync<ICommand>(x => x.ExecuteAsync());
 
-    return h;
-}, e => e, verbsIndex: true);
 
-Console.WriteLine(helpText);
+    result.WithNotParsed(err =>
+    {
+        var helpText = HelpText.AutoBuild(commandResult, h =>
+        {
+            h.AdditionalNewLineAfterOption = true;
+            h.Heading = "EdgeDB.Net CLI";
+            h.Copyright = "Copyright (c) 2022 EdgeDB";
+
+            return h;
+        }, e => e, verbsIndex: true);
+
+        Console.WriteLine(helpText);
+    });
+
+}
+catch (Exception x)
+{
+    Console.WriteLine(x);   
+}
+
+
+

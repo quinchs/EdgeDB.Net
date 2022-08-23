@@ -25,22 +25,30 @@ namespace EdgeDB.CLI.Utils
             return directory;
         }
 
-        public static async Task CreateGeneratedProjectAsync(string root, string name, string language)
+        public static async Task CreateGeneratedProjectAsync(string root, string name)
         {
             var result = await Cli.Wrap("dotnet")
-                .WithArguments($"new classlib --framework \"net6.0\" -o {name} -lang {language}")
+                .WithArguments($"new classlib --framework \"net6.0\" -o {name}")
                 .WithWorkingDirectory(root)
                 .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
                 .WithStandardOutputPipe(PipeTarget.ToStream(Console.OpenStandardOutput()))
                 .ExecuteAsync();
 
+            if (result.ExitCode != 0)
+                throw new IOException($"Failed to create new project");
+
+            result = await Cli.Wrap("dotnet")
+                .WithArguments("add package EdgeDB.Net.Driver")
+                .WithWorkingDirectory(Path.Combine(root, name))
+                .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
+                .WithStandardOutputPipe(PipeTarget.ToStream(Console.OpenStandardOutput()))
+                .ExecuteAsync();
+
+            if (result.ExitCode != 0)
+                throw new IOException($"Failed to create new project");
+
             // remove default file
-            File.Delete(Path.Combine(root, name, language switch
-            {
-                "c#" => "Class1.cs",
-                "vb" => "Class1.vb",
-                "f#" => "Library.fs",
-            }));
+            File.Delete(Path.Combine(root, name, "Class1.cs"));
         }
 
         public static IEnumerable<string> GetTargetEdgeQLFiles(string root)

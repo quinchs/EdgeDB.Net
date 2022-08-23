@@ -3,6 +3,7 @@ using EdgeDB.CLI.Arguments;
 using EdgeDB.CLI.Utils;
 using EdgeDB.Codecs;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace EdgeDB.CLI;
 
@@ -18,13 +19,11 @@ public class Generate : ConnectionArguments, ICommand
     [Option('n', "generated-project-name", HelpText = "The name of the generated project.")]
     public string GeneratedProjectName { get; set; } = "EdgeDB.Generated";
 
-    [Option("target", HelpText = "The language the generated code should target\n\nValid inputs are: C#, F#, and VB")]
-    public string? TargetLanguage { get; set; } 
-
+    [Option('f', "force", HelpText = "Force regeneration of files")]
+    public bool Force { get; set; }
+    
     public async Task ExecuteAsync()
     {
-        TargetLanguage = (TargetLanguage ?? "c#").ToLower();
-
         // get connection info
         var connection = GetConnection();
 
@@ -35,83 +34,60 @@ public class Generate : ConnectionArguments, ICommand
         await client.ConnectAsync();
 
         var projectRoot = ProjectUtils.GetProjectRoot();
-        
-        OutputDirectory ??= Path.Combine(projectRoot, "EdgeDB.Generated");
 
-        if(GenerateProject && !Directory.Exists(OutputDirectory))
+        OutputDirectory ??= Path.Combine(projectRoot, GeneratedProjectName);
+
+        if (GenerateProject && !Directory.Exists(OutputDirectory))
         {
-            Console.WriteLine("Creating EdgeDB.Generated project...");
-            await ProjectUtils.CreateGeneratedProjectAsync(projectRoot, GeneratedProjectName, TargetLanguage);
+            Console.WriteLine($"Creating project {GeneratedProjectName}...");
+            await ProjectUtils.CreateGeneratedProjectAsync(projectRoot, GeneratedProjectName);
         }
 
         // find edgeql files
-        var edgeqlFiles = ProjectUtils.GetTargetEdgeQLFiles(projectRoot);
-        
-        Console.WriteLine($"Generating {edgeqlFiles.Count()} files...");
+        var edgeqlFiles = ProjectUtils.GetTargetEdgeQLFiles(projectRoot).ToArray();
 
-        var queriesExtensionWriter = CreateDefaultReader();
+        // compute the hashes for each file
+        string[] hashs = edgeqlFiles.Select(x => HashUtils.HashEdgeQL(File.ReadAllText(x))).ToArray();
 
-        var languageWriter = ILanguageWriter.GetWriter(TargetLanguage);
+        Console.WriteLine($"Generating {edgeqlFiles.Length} files...");
 
-        foreach (var file in edgeqlFiles)
+        for(int i = 0; i != edgeqlFiles.Length; i++)
         {
+            var file = edgeqlFiles[i];
+            var hash = hashs[i];
+            var targetFileName = TextUtils.ToPascalCase(Path.GetFileName(file).Split('.')[0]);
+            var targetOutputPath = Path.Combine(projectRoot, GeneratedProjectName, $"{targetFileName}.g.cs");
             var edgeql = File.ReadAllText(file);
-            var parseResult = await client.ParseAsync(edgeql, Cardinality.Many, IOFormat.Binary, Capabilities.All, default);
 
-            ProcessEdgeQLFile(parseResult, languageWriter, queriesExtensionWriter);
-        }
-    }
-
-    private void ProcessEdgeQLFile(EdgeDBBinaryClient.ParseResult parseResult, ILanguageWriter writer, 
-        CodeWriter extWriter)
-    {
-        // generate the type
-        var codecType = GetTypeOfCodec(parseResult.OutCodec.Codec);
-    }
-
-    private CodecTypeInfo GetTypeOfCodec(ICodec codec, string? name = null)
-    {
-        CodecTypeInfo typeInfo;
-
-        // TODO: complete codec parsing
-
-        typeInfo = codec switch
-        {
-            Codecs.Object obj => new CodecTypeInfo
+            if (!Force && File.Exists(targetOutputPath))
             {
-                IsObject = true,
-                Children = obj.InnerCodecs.Select((x, i) => GetTypeOfCodec(x, obj.PropertyNames[i])),
-                TypeName = name
-            },
-            ICodec set when ReflectionUtils.IsSubclassOfRawGeneric(set.GetType(), typeof(Set<>)) => new CodecTypeInfo
-            {
-                
-                Children = new[] { GetTypeOfCodec((ICodec)set.GetType().GetField("_innerCodec", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(set)!) }
+                // check the hashes 
+                var hashHeader = Regex.Match(File.ReadAllLines(targetOutputPath)[1], @"\/\/ edgeql:([0-9a-fA-F]{64})");
+
+                if(hashHeader.Success && hashHeader.Groups[1].Value == hash)
+                {
+                    Console.WriteLine($"{i + 1}: Skipping {file}: File already generated");
+                    continue;
+                }
             }
-        };
 
-        typeInfo.Name = name ?? typeInfo.Name;
-    }
+            try
+            {
+                var result = await EdgeQLParser.ParseAndGenerateAsync(client, edgeql, GeneratedProjectName, hash, targetFileName);
+                File.WriteAllText(targetOutputPath, result.Code);
+            }
+            catch (EdgeDBErrorException error)
+            {
+                Console.WriteLine($"Failed to parse {file} (line {error.ErrorResponse.Attributes.FirstOrDefault(x => x.Code == 65523).ToString() ?? "??"}, column {error.ErrorResponse.Attributes.FirstOrDefault(x => x.Code == 65524).ToString() ?? "??"}):");
+                Console.WriteLine(error.Message);
+                Console.WriteLine(QueryErrorFormatter.FormatError(edgeql, error));
+                Console.WriteLine($"{i + 1}: Skipping {file}: File contains errors");
+                continue;
+            }
 
-    private class CodecTypeInfo
-    {
-        public bool IsArray { get; set; }
-        public bool IsObject { get; set; }
-        public bool IsTuple { get; set; }
-        public string? Name { get; set; }
-        public string? TypeName { get; set; }
-        public IEnumerable<CodecTypeInfo>? Children { get; set; }
-    }
+            Console.WriteLine($"{i + 1}: {file} => {targetOutputPath}");
+        }
 
-    private CodeWriter CreateDefaultReader()
-    {
-        var writer = new CodeWriter();
-        writer.AppendLine("// AUTOGENERATED: DO NOT MODIFY");
-        writer.AppendLine($"// Generated on {DateTime.UtcNow:O}");
-        writer.AppendLine($"using EdgeDB;");
-        writer.AppendLine($"using {GeneratedProjectName};");
-        writer.AppendLine();
-        
-        return writer;
+        Console.WriteLine("Generation complete!");
     }
 }
