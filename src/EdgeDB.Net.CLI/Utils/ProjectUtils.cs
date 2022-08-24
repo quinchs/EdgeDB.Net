@@ -28,8 +28,8 @@ namespace EdgeDB.CLI.Utils
         public static async Task CreateGeneratedProjectAsync(string root, string name)
         {
             var result = await Cli.Wrap("dotnet")
-                .WithArguments($"new classlib --framework \"net6.0\" -o {name}")
-                .WithWorkingDirectory(root)
+                .WithArguments($"new classlib --framework \"net6.0\" -n {name}")
+                .WithWorkingDirectory(Directory.GetParent(root)?.FullName ?? root)
                 .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
                 .WithStandardOutputPipe(PipeTarget.ToStream(Console.OpenStandardOutput()))
                 .ExecuteAsync();
@@ -39,7 +39,7 @@ namespace EdgeDB.CLI.Utils
 
             result = await Cli.Wrap("dotnet")
                 .WithArguments("add package EdgeDB.Net.Driver")
-                .WithWorkingDirectory(Path.Combine(root, name))
+                .WithWorkingDirectory(Path.Combine(Directory.GetParent(root)?.FullName ?? root, name))
                 .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
                 .WithStandardOutputPipe(PipeTarget.ToStream(Console.OpenStandardOutput()))
                 .ExecuteAsync();

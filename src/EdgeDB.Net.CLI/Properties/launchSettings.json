@@ -2,7 +2,8 @@
   "profiles": {
     "EdgeDB.Net.CLI": {
       "commandName": "Project",
-      "commandLineArgs": "generate -f"
+      //"commandLineArgs": "file-watch-internal --dir C:\\Users\\lynch\\source\\repos\\EdgeDB"
+      "commandLineArgs": "generate -o C:\\Users\\lynch\\source\\repos\\EdgeDB\\examples\\EdgeDB.Examples.GenerationExample\\Generated"
     }
   }
 }
