@@ -31,7 +31,7 @@ namespace EdgeDB.CLI
 
         public static GenerationTargetInfo GetTargetInfo(string edgeqlFile, string targetDir)
         {
-            var fileContent = File.ReadAllText(edgeqlFile);
+            string fileContent = File.ReadAllText(edgeqlFile);
             var hash = HashUtils.HashEdgeQL(fileContent);
             var fileName = TextUtils.ToPascalCase(Path.GetFileName(edgeqlFile).Split('.')[0]);
 

@@ -1,12 +1,13 @@
 ﻿using CliWrap;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace EdgeDB.CLI.Utils
-{
+{   
     internal class ProjectUtils
     {
         public static string GetProjectRoot()
@@ -25,11 +26,47 @@ namespace EdgeDB.CLI.Utils
             return directory;
         }
 
+        public static Process? GetWatcherProcess(string root)
+        {
+            var file = Path.Combine(root, "edgeql.dotnet.watcher.process");
+            if (File.Exists(file) && int.TryParse(File.ReadAllText(file), out var id))
+            {
+                try
+                {
+                    return Process.GetProcessById(id);
+                }
+                catch { return null; }
+            }
+
+            return null;
+        }
+
+        public static void RegisterProcessAsWatcher(string root)
+        {
+            var id = Process.GetCurrentProcess().Id;
+
+            File.WriteAllText(Path.Combine(root, "edgeql.dotnet.watcher.process"), $"{id}");
+
+            // add to gitignore if its here
+            var gitignore = Path.Combine(root, ".gitignore");
+            if (File.Exists(gitignore))
+            {
+                var contents = File.ReadAllText(gitignore);
+                
+                if(!contents.Contains("edgeql.dotnet.watcher.process"))
+                {
+                    contents += $"{Environment.NewLine}# EdgeDB.Net CLI watcher info file{Environment.NewLine}edgeql.dotnet.watcher.process";
+                    File.WriteAllText(gitignore, contents);
+                }
+            }
+            
+        }
+
         public static async Task CreateGeneratedProjectAsync(string root, string name)
         {
             var result = await Cli.Wrap("dotnet")
                 .WithArguments($"new classlib --framework \"net6.0\" -n {name}")
-                .WithWorkingDirectory(Directory.GetParent(root)?.FullName ?? root)
+                .WithWorkingDirectory(root)
                 .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
                 .WithStandardOutputPipe(PipeTarget.ToStream(Console.OpenStandardOutput()))
                 .ExecuteAsync();
@@ -39,7 +76,7 @@ namespace EdgeDB.CLI.Utils
 
             result = await Cli.Wrap("dotnet")
                 .WithArguments("add package EdgeDB.Net.Driver")
-                .WithWorkingDirectory(Path.Combine(Directory.GetParent(root)?.FullName ?? root, name))
+                .WithWorkingDirectory(Path.Combine(root, name))
                 .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
                 .WithStandardOutputPipe(PipeTarget.ToStream(Console.OpenStandardOutput()))
                 .ExecuteAsync();

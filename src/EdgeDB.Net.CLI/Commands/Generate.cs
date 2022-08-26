@@ -2,6 +2,8 @@ using CommandLine;
 using EdgeDB.CLI.Arguments;
 using EdgeDB.CLI.Utils;
 using EdgeDB.Codecs;
+using Newtonsoft.Json;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -21,7 +23,10 @@ public class Generate : ConnectionArguments, ICommand
 
     [Option('f', "force", HelpText = "Force regeneration of files")]
     public bool Force { get; set; }
-    
+
+    [Option("watch", HelpText = "Listens for any changes or new edgeql files and generates them automatically")]
+    public bool Watch { get; set; }
+
     public async Task ExecuteAsync()
     {
         // get connection info
@@ -43,8 +48,10 @@ public class Generate : ConnectionArguments, ICommand
         {
             Console.WriteLine($"Creating project {GeneratedProjectName}...");
             await ProjectUtils.CreateGeneratedProjectAsync(OutputDirectory, GeneratedProjectName);
-            OutputDirectory = Path.Combine(OutputDirectory, GeneratedProjectName);
         }
+        
+        if(GenerateProject)
+            OutputDirectory = Path.Combine(OutputDirectory, GeneratedProjectName);
 
         // find edgeql files
         var edgeqlFiles = ProjectUtils.GetTargetEdgeQLFiles(projectRoot).ToArray();
@@ -80,5 +87,38 @@ public class Generate : ConnectionArguments, ICommand
         }
 
         Console.WriteLine("Generation complete!");
+
+        if(Watch)
+        {
+            var existing = ProjectUtils.GetWatcherProcess(projectRoot);
+
+            if(existing is not null)
+            {
+                Console.WriteLine("Watching already running");
+                return;
+            }
+
+            StartWatchProcess(connection);
+        }
+    }
+
+    public void StartWatchProcess(EdgeDBConnection connection)
+    {
+        var current = Process.GetCurrentProcess();
+        var connString = JsonConvert.SerializeObject(connection).Replace("\"", "\\\"");
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = current.MainModule.FileName,
+            Arguments = $"file-watch-internal --connection \"{connString}\" --dir \"{OutputDirectory}\" --namespace \"{GeneratedProjectName}\"",
+            UseShellExecute = true,
+        });
+
+
+        
+
+        //process.StartInfo.Arguments = 
+        //process.StartInfo.UseShellExecute = true;
+        //process.Start();
     }
 }

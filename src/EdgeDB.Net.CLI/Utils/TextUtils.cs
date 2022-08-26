@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace EdgeDB.CLI.Utils
@@ -14,8 +15,9 @@ namespace EdgeDB.CLI.Utils
         public static string ToPascalCase(string input)
         {
             _cultureInfo ??= CultureInfo.CurrentCulture;
-
-            return _cultureInfo.TextInfo.ToTitleCase(input.Replace("_", " ")).Replace(" ", "");
+            var t = Regex.Replace(input, @"[^^]([A-Z])", m => $"{m.Value[0]} {m.Groups[1].Value}");
+            
+            return _cultureInfo.TextInfo.ToTitleCase(t.Replace("_", " ")).Replace(" ", "");
         }
 
         public static string ToCamelCase(string input)

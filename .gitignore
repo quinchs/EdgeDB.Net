@@ -375,3 +375,6 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 src/EdgeDB.ExampleApp/dump.db
+
+# EdgeDB.Net CLI watcher info file
+edgeql.dotnet.watcher.process

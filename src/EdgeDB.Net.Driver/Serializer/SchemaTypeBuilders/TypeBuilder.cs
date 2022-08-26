@@ -127,7 +127,7 @@ namespace EdgeDB.Serializer
                                        ?.GetCustomAttribute<EdgeDBDeserializerAttribute>() != null;
 
             // allow abstract passthru
-            return type.IsAbstract ? true : (type.IsClass || type.IsValueType) && !type.IsSealed && validConstructor;
+            return type.IsAbstract ? true : (type.IsClass || type.IsValueType) && validConstructor;
         }
 
         internal static bool TryGetCollectionParser(Type type, out Func<Array, Type, object>? builder)
