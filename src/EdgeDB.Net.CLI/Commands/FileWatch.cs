@@ -159,12 +159,19 @@ namespace EdgeDB.CLI.Commands
             }
         }
 
+        private bool IsValidFile(string path)
+            => !path.StartsWith(Path.Combine(Dir!, "dbschema", "migrations"));
+
         public async Task GenerateAsync(EdgeQLParser.GenerationTargetInfo info)
         {
             await _mutex.WaitAsync().ConfigureAwait(false);
 
             try
             {
+                // check if the file is a valid file
+                if (!IsValidFile(info.EdgeQLFilePath!))
+                    return;
+
                 await _client!.ConnectAsync();
 
                 try
@@ -207,6 +214,9 @@ namespace EdgeDB.CLI.Commands
 
         private void _watcher_Deleted(object sender, FileSystemEventArgs e)
         {
+            if (!IsValidFile(e.FullPath))
+                return;
+
             // get the generated file name
             var path = Path.Combine(Output!, $"{Path.GetFileNameWithoutExtension(e.FullPath)}.g.cs");
 
@@ -216,6 +226,9 @@ namespace EdgeDB.CLI.Commands
 
         private void _watcher_Renamed(object sender, RenamedEventArgs e)
         {
+            if (!IsValidFile(e.FullPath))
+                return;
+
             var oldPath = Path.Combine(Output!, $"{Path.GetFileNameWithoutExtension(e.OldFullPath)}.g.cs");
             var newPath = Path.Combine(Output!, $"{Path.GetFileNameWithoutExtension(e.FullPath)}.g.cs");
 

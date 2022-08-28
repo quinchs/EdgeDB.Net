@@ -11,7 +11,7 @@ namespace EdgeDB.CLI.Arguments
 {
     public class LogArgs
     {
-        [Option("loglevel")]
+        [Option("loglevel", HelpText = "Configure the log level")]
         public LogEventLevel LogLevel { get; set; } = LogEventLevel.Information;
     }
 }
