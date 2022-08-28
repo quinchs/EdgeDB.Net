@@ -7,7 +7,7 @@ namespace EdgeDB.Utils
     internal class ConfigUtils
     {
         public static string EdgeDBConfigDir
-            => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)  
+            => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                 ? Path.Combine(GetEdgeDBBasePath(), "config")
                 : GetEdgeDBBasePath();
 
