@@ -37,6 +37,8 @@ namespace EdgeDB.CLI.Utils
                 FileName = current.MainModule!.FileName,
                 Arguments = $"file-watch-internal --connection \"{connString}\" --dir {root} --output \"{outputDir}\" --namespace \"{@namespace}\"",
                 UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
             })!.Id;
         }
 
@@ -57,7 +59,7 @@ namespace EdgeDB.CLI.Utils
 
         public static void RegisterProcessAsWatcher(string root)
         {
-            var id = Process.GetCurrentProcess().Id;
+            var id = Environment.ProcessId;
 
             File.WriteAllText(Path.Combine(root, "edgeql.dotnet.watcher.process"), $"{id}");
 
