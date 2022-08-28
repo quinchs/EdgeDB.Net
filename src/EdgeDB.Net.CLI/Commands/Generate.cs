@@ -3,6 +3,7 @@ using EdgeDB.CLI.Arguments;
 using EdgeDB.CLI.Utils;
 using EdgeDB.Codecs;
 using Newtonsoft.Json;
+using Serilog;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -18,7 +19,7 @@ public class Generate : ConnectionArguments, ICommand
     [Option('o', "output", HelpText = "The output directory for the generated source to be placed.")]
     public string? OutputDirectory { get; set; }
 
-    [Option('n', "project-name", HelpText = "The name of the generated project.")]
+    [Option('n', "project-name", HelpText = "The name of the generated project and namespace of generated files.")]
     public string GeneratedProjectName { get; set; } = "EdgeDB.Generated";
 
     [Option('f', "force", HelpText = "Force regeneration of files")]
@@ -27,7 +28,7 @@ public class Generate : ConnectionArguments, ICommand
     [Option("watch", HelpText = "Listens for any changes or new edgeql files and generates them automatically")]
     public bool Watch { get; set; }
 
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(ILogger logger)
     {
         // get connection info
         var connection = GetConnection();
@@ -35,7 +36,7 @@ public class Generate : ConnectionArguments, ICommand
         // create the client
         var client = new EdgeDBTcpClient(connection, new());
 
-        Console.WriteLine($"Connecting to {connection.Hostname}:{connection.Port}...");
+        logger.Information("Connecting to {@Host}:{@Port}...", connection.Hostname, connection.Port);
         await client.ConnectAsync();
 
         var projectRoot = ProjectUtils.GetProjectRoot();
@@ -46,7 +47,7 @@ public class Generate : ConnectionArguments, ICommand
 
         if (GenerateProject && !Directory.Exists(Path.Combine(OutputDirectory, GeneratedProjectName)))
         {
-            Console.WriteLine($"Creating project {GeneratedProjectName}...");
+            logger.Information("Creating project {@ProjectName}...", GeneratedProjectName);
             await ProjectUtils.CreateGeneratedProjectAsync(OutputDirectory, GeneratedProjectName);
         }
         
@@ -56,7 +57,7 @@ public class Generate : ConnectionArguments, ICommand
         // find edgeql files
         var edgeqlFiles = ProjectUtils.GetTargetEdgeQLFiles(projectRoot).ToArray();
         
-        Console.WriteLine($"Generating {edgeqlFiles.Length} files...");
+        logger.Information("Generating {@FileCount} files...", edgeqlFiles.Length);
 
         for(int i = 0; i != edgeqlFiles.Length; i++)
         {
@@ -65,7 +66,7 @@ public class Generate : ConnectionArguments, ICommand
 
             if (!Force && info.GeneratedTargetExistsAndIsUpToDate())
             {
-                Console.WriteLine($"{i + 1}: Skipping {file}: File already generated and up-to-date.");
+                logger.Warning("Skipping {@File}: File already generated and up-to-date.", file);
                 continue;
             }
 
@@ -76,17 +77,18 @@ public class Generate : ConnectionArguments, ICommand
             }
             catch (EdgeDBErrorException error)
             {
-                Console.WriteLine($"Failed to parse {file} (line {error.ErrorResponse.Attributes.FirstOrDefault(x => x.Code == 65523).ToString() ?? "??"}, column {error.ErrorResponse.Attributes.FirstOrDefault(x => x.Code == 65524).ToString() ?? "??"}):");
-                Console.WriteLine(error.Message);
-                Console.WriteLine(QueryErrorFormatter.FormatError(info.EdgeQL!, error));
-                Console.WriteLine($"{i + 1}: Skipping {file}: File contains errors");
+                logger.Error("Skipping {@File}: Failed to parse - {@Message} at line {@Line} column {@Column}", 
+                    file,
+                    error.Message,
+                    error.ErrorResponse.Attributes.FirstOrDefault(x => x.Code == 65523).ToString() ?? "??", 
+                    error.ErrorResponse.Attributes.FirstOrDefault(x => x.Code == 65524).ToString() ?? "??");
                 continue;
             }
 
-            Console.WriteLine($"{i + 1}: {file} => {info.TargetFilePath}");
+            logger.Debug("{@EdgeQL} => {@CSharp}", file, info.TargetFilePath);
         }
 
-        Console.WriteLine("Generation complete!");
+        logger.Information("Generation complete!");
 
         if(Watch)
         {
@@ -94,31 +96,13 @@ public class Generate : ConnectionArguments, ICommand
 
             if(existing is not null)
             {
-                Console.WriteLine("Watching already running");
+                logger.Warning("Watching already running");
                 return;
             }
 
-            StartWatchProcess(connection);
+            logger.Information("Starting file watcher...");
+            var pid = ProjectUtils.StartWatchProcess(connection, projectRoot, OutputDirectory, GeneratedProjectName);
+            logger.Information("File watcher process started, PID: {@PID}", pid);
         }
-    }
-
-    public void StartWatchProcess(EdgeDBConnection connection)
-    {
-        var current = Process.GetCurrentProcess();
-        var connString = JsonConvert.SerializeObject(connection).Replace("\"", "\\\"");
-
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = current.MainModule.FileName,
-            Arguments = $"file-watch-internal --connection \"{connString}\" --dir \"{OutputDirectory}\" --namespace \"{GeneratedProjectName}\"",
-            UseShellExecute = true,
-        });
-
-
-        
-
-        //process.StartInfo.Arguments = 
-        //process.StartInfo.UseShellExecute = true;
-        //process.Start();
     }
 }

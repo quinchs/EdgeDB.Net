@@ -1,6 +1,8 @@
-﻿namespace EdgeDB.CLI;
+﻿using Serilog;
+
+namespace EdgeDB.CLI;
 
 interface ICommand
 {
-    Task ExecuteAsync();
+    Task ExecuteAsync(ILogger logger);
 }

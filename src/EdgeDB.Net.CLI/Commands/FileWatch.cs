@@ -1,18 +1,99 @@
 ﻿using CommandLine;
 using EdgeDB.CLI;
+using EdgeDB.CLI.Arguments;
 using EdgeDB.CLI.Utils;
-using EdgeDB.Net.CLI.Utils;
 using Newtonsoft.Json;
+using Serilog;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EdgeDB.Net.CLI.Commands
+namespace EdgeDB.CLI.Commands
 {
+    [Verb("watch", HelpText = "Configure the file watcher")]
+    public class FileWatch : ConnectionArguments, ICommand
+    {
+        [Option('k', "kill", SetName = "functions", HelpText = "Kill the current running watcher for the project")]
+        public bool Kill { get; set; }
+
+        [Option('s', "start", SetName = "functions", HelpText = "Start a watcher for the current project")]
+        public bool Start { get; set; }
+
+        [Option('o', "output", HelpText = "The output directory for the generated source to be placed.")]
+        public string? OutputDirectory { get; set; }
+
+        [Option('n', "project-name", HelpText = "The name of the generated project and namespace of generated files.")]
+        public string GeneratedProjectName { get; set; } = "EdgeDB.Generated";
+
+        public Task ExecuteAsync(ILogger logger)
+        {
+            // get project root
+            var root = ProjectUtils.GetProjectRoot();
+            var watcher = ProjectUtils.GetWatcherProcess(root);
+            logger.Debug("Watcher?: {@Watcher} Project root: {@Root}", watcher is not null, root);
+            try
+            {
+                if (!Kill && !Start)
+                {
+                    // display information about the current watcher
+                    if (watcher is null)
+                    {
+                        logger.Information("No file watcher is running for {@Dir}", root);
+                        return Task.CompletedTask;
+                    }
+
+                    logger.Information("File watcher is watching {@Dir}", Path.Combine(root, "*.edgeql"));
+                    logger.Information("Process ID: {@Id}", watcher.Id);
+
+                    return Task.CompletedTask;
+                }
+
+                if (Kill)
+                {
+                    if (watcher is null)
+                    {
+                        logger.Error("No watcher is running for {@Dir}", root);
+                        return Task.CompletedTask;
+                    }
+
+                    watcher.Kill();
+                    logger.Information("Watcher process {@PID} kiled", watcher.Id);
+
+                    return Task.CompletedTask;
+                }
+
+                if (Start)
+                {
+                    if (watcher is not null)
+                    {
+                        logger.Error("Watcher already running! Process ID: {@PID}", watcher.Id);
+                        return Task.CompletedTask;
+                    }
+
+                    var connection = GetConnection();
+
+                    OutputDirectory ??= Path.Combine(root, GeneratedProjectName);
+
+                    var pid = ProjectUtils.StartWatchProcess(connection, root, OutputDirectory, GeneratedProjectName);
+
+                    logger.Information("Watcher process started, PID: {@PID}", pid);
+                }
+
+                return Task.CompletedTask;
+            }
+            catch(Exception x)
+            {
+                logger.Error(x, "Failed to run watcher command");
+                return Task.CompletedTask;
+            }
+        }
+    }
+
     [Verb("file-watch-internal", Hidden = true)]
-    internal class FileWatch : ICommand
+    internal class FileWatchInternal : ICommand
     {
         [Option("connection")]
         public string? Connection { get; set; }
@@ -20,15 +101,19 @@ namespace EdgeDB.Net.CLI.Commands
         [Option("dir")]
         public string? Dir { get; set; }
 
+        [Option("output")]
+        public string? Output { get; set; }
+
         [Option("namespace")]
         public string? Namespace { get; set; }
 
         private readonly FileSystemWatcher _watcher = new();
         private EdgeDBTcpClient? _client;
         private readonly SemaphoreSlim _mutex = new(1, 1);
+        private readonly ConcurrentStack<EdgeQLParser.GenerationTargetInfo> _writeQueue = new();
+        private TaskCompletionSource _writeDispatcher = new();
 
-
-        public async Task ExecuteAsync()
+        public async Task ExecuteAsync(ILogger logger)
         {
             if (Connection is null)
                 throw new InvalidOperationException("Connection must be specified");
@@ -40,6 +125,7 @@ namespace EdgeDB.Net.CLI.Commands
             _watcher.IncludeSubdirectories = true;
 
             _watcher.Error += _watcher_Error;
+
             _watcher.Changed += CreatedAndUpdated;
             _watcher.Created += CreatedAndUpdated;
             _watcher.Deleted += _watcher_Deleted;
@@ -58,7 +144,19 @@ namespace EdgeDB.Net.CLI.Commands
 
             ProjectUtils.RegisterProcessAsWatcher(Dir!);
 
-            await Task.Delay(-1);
+            logger.Information("Watcher started for {@Dir}", Output);
+
+            while (true)
+            {
+                await _writeDispatcher.Task;
+                
+                while(_writeQueue.TryPop(out var info))
+                {
+                    await GenerateAsync(info);
+                }
+
+                _writeDispatcher = new();
+            }
         }
 
         public async Task GenerateAsync(EdgeQLParser.GenerationTargetInfo info)
@@ -92,37 +190,37 @@ namespace EdgeDB.Net.CLI.Commands
 
         private void CreatedAndUpdated(object sender, FileSystemEventArgs e)
         {
-            FileUtils.WaitForHotFile(e.FullPath);
+            if (!FileUtils.WaitForHotFile(e.FullPath))
+                return;
 
-            var info = EdgeQLParser.GetTargetInfo(e.FullPath, Dir!);
+            // wait an extra second to make sure the file is fully written
+            Thread.Sleep(1000);
+
+            var info = EdgeQLParser.GetTargetInfo(e.FullPath, Output!);
 
             if (info.GeneratedTargetExistsAndIsUpToDate())
                 return;
 
-            Task.Run(async () =>
-            {
-                await Task.Delay(200);
-                await GenerateAsync(info);
-            });
+            _writeQueue.Push(info);
+            _writeDispatcher.TrySetResult();
         }
 
         private void _watcher_Deleted(object sender, FileSystemEventArgs e)
         {
-            var info = EdgeQLParser.GetTargetInfo(e.FullPath, Dir!);
+            // get the generated file name
+            var path = Path.Combine(Output!, $"{Path.GetFileNameWithoutExtension(e.FullPath)}.g.cs");
 
-            if (File.Exists(info.TargetFilePath))
-                File.Delete(info.TargetFilePath);
+            if (File.Exists(path))
+                File.Delete(path);
         }
 
         private void _watcher_Renamed(object sender, RenamedEventArgs e)
         {
-            var info = EdgeQLParser.GetTargetInfo(e.OldFullPath, Dir!);
+            var oldPath = Path.Combine(Output!, $"{Path.GetFileNameWithoutExtension(e.OldFullPath)}.g.cs");
+            var newPath = Path.Combine(Output!, $"{Path.GetFileNameWithoutExtension(e.FullPath)}.g.cs");
 
-            if (File.Exists(info.TargetFilePath))
-            {
-                var newInfo = EdgeQLParser.GetTargetInfo(e.FullPath, Dir!);
-                File.Move(info.TargetFilePath, newInfo.TargetFilePath!);
-            }
+            if (File.Exists(oldPath))
+                File.Move(oldPath, newPath);
         }
 
         private void _watcher_Error(object sender, ErrorEventArgs e)

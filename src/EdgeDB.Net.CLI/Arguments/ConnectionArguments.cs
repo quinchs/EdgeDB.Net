@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.CLI.Arguments
 {
-    public class ConnectionArguments
+    public class ConnectionArguments : LogArgs
     {
         [Option("dsn", HelpText = "DSN for EdgeDB to connect to (overrides all other options except password)")]
         public string? DSN { get; set; }

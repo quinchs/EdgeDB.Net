@@ -1,4 +1,5 @@
 ﻿using CliWrap;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,6 +27,19 @@ namespace EdgeDB.CLI.Utils
             return directory;
         }
 
+        public static int StartWatchProcess(EdgeDBConnection connection, string root, string outputDir, string @namespace)
+        {
+            var current = Process.GetCurrentProcess();
+            var connString = JsonConvert.SerializeObject(connection).Replace("\"", "\\\"");
+
+            return Process.Start(new ProcessStartInfo
+            {
+                FileName = current.MainModule!.FileName,
+                Arguments = $"file-watch-internal --connection \"{connString}\" --dir {root} --output \"{outputDir}\" --namespace \"{@namespace}\"",
+                UseShellExecute = true,
+            })!.Id;
+        }
+
         public static Process? GetWatcherProcess(string root)
         {
             var file = Path.Combine(root, "edgeql.dotnet.watcher.process");
@@ -33,7 +47,7 @@ namespace EdgeDB.CLI.Utils
             {
                 try
                 {
-                    return Process.GetProcessById(id);
+                    return Process.GetProcesses().FirstOrDefault(x => x.Id == id);
                 }
                 catch { return null; }
             }
