@@ -13,10 +13,10 @@ namespace EdgeDB.CLI;
 [Verb("generate", HelpText = "Generate or updates csharp classes from .edgeql files.")]
 public class Generate : ConnectionArguments, ICommand
 {
-    [Option('p', "build-project", HelpText = "Whether or not to create the default class library that will contain the generated source code.")]
+    [Option('p', "build-project", HelpText = "Whether or not to create the default class library that will contain the generated source code. Enabled by default.")]
     public bool GenerateProject { get; set; } = true;
 
-    [Option('o', "output", HelpText = "The output directory for the generated source to be placed.")]
+    [Option('o', "output", HelpText = "The output directory for the generated source to be placed. When generating a project, source files will be placed in that projects directory. Default is the current directory")]
     public string? OutputDirectory { get; set; }
 
     [Option('n', "project-name", HelpText = "The name of the generated project and namespace of generated files.")]
@@ -25,7 +25,7 @@ public class Generate : ConnectionArguments, ICommand
     [Option('f', "force", HelpText = "Force regeneration of files")]
     public bool Force { get; set; }
 
-    [Option("watch", HelpText = "Listens for any changes or new edgeql files and generates them automatically")]
+    [Option("watch", HelpText = "Listens for any changes or new edgeql files and (re)generates them automatically")]
     public bool Watch { get; set; }
 
     public async Task ExecuteAsync(ILogger logger)
@@ -41,7 +41,7 @@ public class Generate : ConnectionArguments, ICommand
 
         var projectRoot = ProjectUtils.GetProjectRoot();
 
-        OutputDirectory ??= projectRoot;
+        OutputDirectory ??= Environment.CurrentDirectory;
 
         Directory.CreateDirectory(OutputDirectory);
 

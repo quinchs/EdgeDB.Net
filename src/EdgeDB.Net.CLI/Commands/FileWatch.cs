@@ -75,7 +75,7 @@ namespace EdgeDB.CLI.Commands
 
                     var connection = GetConnection();
 
-                    OutputDirectory ??= Path.Combine(root, GeneratedProjectName);
+                    OutputDirectory ??= Path.Combine(Environment.CurrentDirectory, GeneratedProjectName);
 
                     var pid = ProjectUtils.StartWatchProcess(connection, root, OutputDirectory, GeneratedProjectName);
 

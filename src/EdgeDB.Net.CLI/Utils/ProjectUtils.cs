@@ -73,7 +73,6 @@ namespace EdgeDB.CLI.Utils
                     File.WriteAllText(gitignore, contents);
                 }
             }
-            
         }
 
         public static async Task CreateGeneratedProjectAsync(string root, string name)
