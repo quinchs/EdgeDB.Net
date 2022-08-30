@@ -75,6 +75,18 @@ public class Generate : ConnectionArguments, ICommand
 
         // find edgeql files
         var edgeqlFiles = ProjectUtils.GetTargetEdgeQLFiles(projectRoot).ToArray();
+
+        // error if any are the same name
+        var groupFileNames = edgeqlFiles.GroupBy(x => Path.GetFileNameWithoutExtension(x));
+        if(groupFileNames.Any(x => x.Count() > 1))
+        {
+            foreach(var conflict in groupFileNames.Where(x => x.Count() > 1))
+            {
+                logger.Fatal($"{{@Count}} files contain the same name ({string.Join(" - ", conflict.Select(x => x))})", conflict.Count());
+            }
+
+            return;
+        }
         
         logger.Information("Generating {@FileCount} files...", edgeqlFiles.Length);
 

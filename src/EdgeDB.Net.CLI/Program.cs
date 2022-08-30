@@ -61,5 +61,5 @@ try
 catch (Exception x)
 {
     // log the root exception.
-    Log.Logger.Error(x, "Critical error");
+    Log.Logger.Fatal(x, "Critical error");
 }
