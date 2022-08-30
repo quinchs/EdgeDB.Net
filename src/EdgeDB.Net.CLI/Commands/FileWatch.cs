@@ -13,21 +13,37 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.CLI.Commands
 {
+    /// <summary>
+    ///     A class representing the <c>watch</c> command.
+    /// </summary>
     [Verb("watch", HelpText = "Configure the file watcher")]
     public class FileWatch : ConnectionArguments, ICommand
     {
+        /// <summary>
+        ///     Gets or sets whether or not to kill a already running watcher.
+        /// </summary>
         [Option('k', "kill", SetName = "functions", HelpText = "Kill the current running watcher for the project")]
         public bool Kill { get; set; }
 
+        /// <summary>
+        ///     Gets or sets whether or not to start a watcher.
+        /// </summary>
         [Option('s', "start", SetName = "functions", HelpText = "Start a watcher for the current project")]
         public bool Start { get; set; }
 
+        /// <summary>
+        ///     Gets or sets the output directory to place the generated source files.
+        /// </summary>
         [Option('o', "output", HelpText = "The output directory for the generated source to be placed.")]
         public string? OutputDirectory { get; set; }
 
+        /// <summary>
+        ///     Gets or sets the project name/namespace of generated files.
+        /// </summary>
         [Option('n', "project-name", HelpText = "The name of the generated project and namespace of generated files.")]
         public string GeneratedProjectName { get; set; } = "EdgeDB.Generated";
 
+        /// <inheritdoc/>
         public Task ExecuteAsync(ILogger logger)
         {
             // get project root
@@ -205,7 +221,7 @@ namespace EdgeDB.CLI.Commands
 
             var info = EdgeQLParser.GetTargetInfo(e.FullPath, Output!);
 
-            if (info.GeneratedTargetExistsAndIsUpToDate())
+            if (info.IsGeneratedTargetExistsAndIsUpToDate())
                 return;
 
             _writeQueue.Push(info);

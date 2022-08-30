@@ -8,9 +8,17 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace EdgeDB.CLI.Utils
-{   
-    internal class ProjectUtils
+{
+    /// <summary>
+    ///     A utility class containing methods realted to edgedb projects.
+    /// </summary>
+    internal static class ProjectUtils
     {
+        /// <summary>
+        ///     Gets the edgedb project root from the current directory.
+        /// </summary>
+        /// <returns>The project root directory.</returns>
+        /// <exception cref="FileNotFoundException">The project could not be found.</exception>
         public static string GetProjectRoot()
         {
             var directory = Environment.CurrentDirectory;
@@ -27,6 +35,14 @@ namespace EdgeDB.CLI.Utils
             return directory;
         }
 
+        /// <summary>
+        ///     Starts a watcher process.
+        /// </summary>
+        /// <param name="connection">The connection info for the watcher process.</param>
+        /// <param name="root">The project root directory.</param>
+        /// <param name="outputDir">The output directory for files the watcher generates to place.</param>
+        /// <param name="namespace">The namespace for generated files.</param>
+        /// <returns>The started watcher process id.</returns>
         public static int StartWatchProcess(EdgeDBConnection connection, string root, string outputDir, string @namespace)
         {
             var current = Process.GetCurrentProcess();
@@ -42,6 +58,13 @@ namespace EdgeDB.CLI.Utils
             })!.Id;
         }
 
+        /// <summary>
+        ///     Gets the watcher process for the provided root directory.
+        /// </summary>
+        /// <param name="root">The project root.</param>
+        /// <returns>
+        ///     The watcher <see cref="Process"/> or <see langword="null"/> if not found.
+        /// </returns>
         public static Process? GetWatcherProcess(string root)
         {
             var file = Path.Combine(root, "edgeql.dotnet.watcher.process");
@@ -57,6 +80,10 @@ namespace EdgeDB.CLI.Utils
             return null;
         }
 
+        /// <summary>
+        ///     Registers the current process as the watcher project for the given project root.
+        /// </summary>
+        /// <param name="root">The project root.</param>
         public static void RegisterProcessAsWatcher(string root)
         {
             var id = Environment.ProcessId;
@@ -77,6 +104,12 @@ namespace EdgeDB.CLI.Utils
             }
         }
 
+        /// <summary>
+        ///     Creates a dotnet project.
+        /// </summary>
+        /// <param name="root">The target directory.</param>
+        /// <param name="name">The name of the project</param>
+        /// <exception cref="IOException">The project failed to be created.</exception>
         public static async Task CreateGeneratedProjectAsync(string root, string name)
         {
             var result = await Cli.Wrap("dotnet")
@@ -103,6 +136,16 @@ namespace EdgeDB.CLI.Utils
             File.Delete(Path.Combine(root, name, "Class1.cs"));
         }
 
+        /// <summary>
+        ///     Gets a list of edgeql file paths for the provided root directory.
+        /// </summary>
+        /// <remarks>
+        ///     migration files are ignored.
+        /// </remarks>
+        /// <param name="root">The root directory to scan for edgeql files.</param>
+        /// <returns>
+        ///     An <see cref="IEnumerable{T}"/> that enumerates a collection of files ending in .edgeql.
+        /// </returns>
         public static IEnumerable<string> GetTargetEdgeQLFiles(string root)
             => Directory.GetFiles(root, "*.edgeql", SearchOption.AllDirectories).Where(x => !x.StartsWith(Path.Combine(root, "dbschema", "migrations")));
     }

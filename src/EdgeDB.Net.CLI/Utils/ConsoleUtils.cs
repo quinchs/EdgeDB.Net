@@ -6,8 +6,17 @@ using System.Threading.Tasks;
 
 namespace EdgeDB.CLI.Utils
 {
+    /// <summary>
+    ///     A utility class containing methods related to the console.
+    /// </summary>
     internal class ConsoleUtils
     {
+        /// <summary>
+        ///     Reads a secret input from STDIN.
+        /// </summary>
+        /// <returns>
+        ///     The entered input received from STDIN.
+        /// </returns>
         public static string ReadSecretInput()
         {
             string input = "";

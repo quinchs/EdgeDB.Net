@@ -10,24 +10,43 @@ using System.Text.RegularExpressions;
 
 namespace EdgeDB.CLI;
 
+/// <summary>
+///     A class representing the <c>generate</c> command.
+/// </summary>
 [Verb("generate", HelpText = "Generate or updates csharp classes from .edgeql files.")]
 public class Generate : ConnectionArguments, ICommand
 {
-    [Option('p', "build-project", HelpText = "Whether or not to create the default class library that will contain the generated source code. Enabled by default.")]
+    /// <summary>
+    ///     Gets or sets whether or not a class library should be generated.
+    /// </summary>
+    [Option('p', "project", HelpText = "Whether or not to create the default class library that will contain the generated source code. Enabled by default.")]
     public bool GenerateProject { get; set; } = true;
 
+    /// <summary>
+    ///     Gets or sets the output directory the generated source files will be placed.
+    /// </summary>
     [Option('o', "output", HelpText = "The output directory for the generated source to be placed. When generating a project, source files will be placed in that projects directory. Default is the current directory")]
     public string? OutputDirectory { get; set; }
 
+    /// <summary>
+    ///     Gets or sets the project name/namespace.
+    /// </summary>
     [Option('n', "project-name", HelpText = "The name of the generated project and namespace of generated files.")]
     public string GeneratedProjectName { get; set; } = "EdgeDB.Generated";
 
+    /// <summary>
+    ///     Gets or sets whether or not to force (re)generate source files.
+    /// </summary>
     [Option('f', "force", HelpText = "Force regeneration of files")]
     public bool Force { get; set; }
 
+    /// <summary>
+    ///     Gets or sets whether or not to start a watch process post-generate.
+    /// </summary>
     [Option("watch", HelpText = "Listens for any changes or new edgeql files and (re)generates them automatically")]
     public bool Watch { get; set; }
 
+    /// <inheritdoc/>
     public async Task ExecuteAsync(ILogger logger)
     {
         // get connection info
@@ -64,7 +83,7 @@ public class Generate : ConnectionArguments, ICommand
             var file = edgeqlFiles[i];
             var info = EdgeQLParser.GetTargetInfo(file, OutputDirectory);
 
-            if (!Force && info.GeneratedTargetExistsAndIsUpToDate())
+            if (!Force && info.IsGeneratedTargetExistsAndIsUpToDate())
             {
                 logger.Warning("Skipping {@File}: File already generated and up-to-date.", file);
                 continue;
