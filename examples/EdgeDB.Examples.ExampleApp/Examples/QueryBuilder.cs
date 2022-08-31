@@ -144,7 +144,7 @@ namespace EdgeDB.ExampleApp.Examples
             {
                 PassedName = ctx.Variables.Args.Value.Name,
                 PassedEmail = ctx.Variables.Args.Value.Email
-            }).Build();
+            }).Build().Pretty;
 
             // Inserting a new type
             var person = new LinkPerson
