@@ -25,7 +25,7 @@ namespace EdgeDB
         {
             var attr = type.GetCustomAttribute<EdgeDBTypeAttribute>();
             var name = attr?.Name ?? type.Name;
-            return attr != null ? $"{(attr.ModuleName != null ? $"{attr.ModuleName}::" : "")}{name}" : name;
+            return attr != null ? $"{(attr.ModuleName != null ? $"{attr.ModuleName}::" : "default::")}{name}" : name;
         }
         public static string GetEdgeDBPropertyName(this MemberInfo info)
         {

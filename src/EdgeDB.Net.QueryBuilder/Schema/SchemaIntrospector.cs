@@ -66,6 +66,7 @@ namespace EdgeDB.Schema
                 }),
                 Properties = ctx.IncludeMultiLink(() => new Property
                 {
+                    Required = ctx.Include<bool>(),
                     Cardinality = (string)ctx.UnsafeLocal<object>("cardinality") == "One"
                         ? ctx.UnsafeLocal<bool>("required") ? DataTypes.Cardinality.One : DataTypes.Cardinality.AtMostOne
                         : ctx.UnsafeLocal<bool>("required") ? DataTypes.Cardinality.AtLeastOne : DataTypes.Cardinality.Many,
@@ -76,7 +77,6 @@ namespace EdgeDB.Schema
                     IsComputed = EdgeQL.Length(ctx.UnsafeLocal<object>("computed_fields")) != 0,
                     IsReadonly = ctx.UnsafeLocal<bool>("readonly"),
                     HasDefault = ctx.Raw<bool>("EXISTS .default or (\"std::sequence\" in .target[IS schema::ScalarType].ancestors.name)")
-
                 })
             }).Filter((x, ctx) => !ctx.UnsafeLocal<bool>("builtin")).ExecuteAsync(edgedb, token: token);
             

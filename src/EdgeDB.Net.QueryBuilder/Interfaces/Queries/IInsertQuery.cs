@@ -11,7 +11,8 @@ namespace EdgeDB.Interfaces.Queries
     ///     Represents a generic <c>INSERT</c> query used within a <see cref="IQueryBuilder"/>.
     /// </summary>
     /// <typeparam name="TType">The type which this <c>INSERT</c> query is querying against.</typeparam>
-    public interface IInsertQuery<TType> : ISingleCardinalityExecutable<TType>
+    /// <typeparam name="TContext">The type of context representing the current builder.</typeparam>
+    public interface IInsertQuery<TType, TContext> : ISingleCardinalityExecutable<TType>
     {
         /// <summary>
         ///     Automatically adds an <c>UNLESS CONFLICT ON ...</c> statement to the current insert
@@ -22,7 +23,7 @@ namespace EdgeDB.Interfaces.Queries
         ///     when this query executes.
         /// </remarks>
         /// <returns>The current query.</returns>
-        IUnlessConflictOn<TType> UnlessConflict();
+        IUnlessConflictOn<TType, TContext> UnlessConflict();
 
         /// <summary>
         ///     Adds an <c>UNLESS CONFLICT ON</c> statement with the given property selector.
@@ -31,9 +32,9 @@ namespace EdgeDB.Interfaces.Queries
         ///     A lambda function selecting which property will be added to the <c>UNLESS CONFLICT ON</c> statement
         /// </param>
         /// <returns>The current query.</returns>
-        IUnlessConflictOn<TType> UnlessConflictOn(Expression<Func<TType, object?>> propertySelector);
+        IUnlessConflictOn<TType, TContext> UnlessConflictOn(Expression<Func<TType, object?>> propertySelector);
         
         /// <inheritdoc cref="UnlessConflictOn(Expression{Func{TType, object?}})"/>
-        IUnlessConflictOn<TType> UnlessConflictOn(Expression<Func<TType, QueryContext, object?>> propertySelector);
+        IUnlessConflictOn<TType, TContext> UnlessConflictOn(Expression<Func<TType, TContext, object?>> propertySelector);
     }
 }

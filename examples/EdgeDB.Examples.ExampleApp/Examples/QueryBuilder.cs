@@ -20,7 +20,6 @@ namespace EdgeDB.ExampleApp.Examples
 
         public class LinkPerson
         {
-            public Guid Id { get; set; }
             public string? Name { get; set; }
             public string? Email { get; set; }
             public LinkPerson? BestFriend { get; set; }
@@ -62,16 +61,6 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
-            var t = QueryBuilder
-                .Select<ConstraintPerson>()
-                .Group((person, builder) =>
-                    builder.Using(() => new
-                    {
-                        Test = "Test"
-                    })
-                    .By(x => x.Test)
-                );
-
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 
@@ -143,6 +132,20 @@ namespace EdgeDB.ExampleApp.Examples
                 })
             }).Build().Prettify();
 
+            // With object variables
+            query = QueryBuilder.With(new
+            {
+                Args = EdgeQL.AsJson(new ConstraintPerson
+                {
+                    Name = "Example",
+                    Email = "example@example.com"
+                })
+            }).Select(ctx => new
+            {
+                PassedName = ctx.Variables.Args.Value.Name,
+                PassedEmail = ctx.Variables.Args.Value.Email
+            }).Build().Pretty;
+
             // Inserting a new type
             var person = new LinkPerson
             {
@@ -202,7 +205,7 @@ namespace EdgeDB.ExampleApp.Examples
             };
 
             var tquery = (await QueryBuilder.For(data,
-                    x => QueryBuilder.Insert(x, false)
+                    x => QueryBuilder.Insert(x)
                 ).BuildAsync(client));
 
             // Else statements (upsert demo)

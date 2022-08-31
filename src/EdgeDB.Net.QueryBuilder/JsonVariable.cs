@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace EdgeDB
 {
     /// <summary>
-    ///     Represents an abstracted form of <see cref="JsonVariable{T}"/>.
+    ///     Represents an abstracted form of <see cref="JsonCollectionVariable{T}"/>.
     /// </summary>
     internal interface IJsonVariable
     {
@@ -43,10 +43,61 @@ namespace EdgeDB
     }
 
     /// <summary>
+    ///     A class representing a singleton, user defined json variable.
+    /// </summary>
+    /// <typeparam name="T">The type that this json variable was initialized with.</typeparam>
+    public class JsonReferenceVariable<T> : IJsonVariable
+    {
+        /// <summary>
+        ///     Gets the value this <see cref="JsonReferenceVariable{T}"/> represents.
+        /// </summary>
+        public T Value { get; }
+
+        /// <summary>
+        ///     Gets the variable name containing the jsonified <see cref="Value"/>.
+        /// </summary>
+        internal string? VariableName { get; }
+
+        /// <summary>
+        ///     Gets the name (in the with block) of this reference variable.
+        /// </summary>
+        internal string? Name { get; }
+
+        /// <summary>
+        ///     Constructs a new <see cref="JsonReferenceVariable{T}"/>.
+        /// </summary>
+        /// <param name="reference">The object reference to be used within this <see cref="JsonReferenceVariable{T}"/>.</param>
+        internal JsonReferenceVariable(T reference)
+        {
+            Value = reference;
+        }
+
+        /// <inheritdoc/>
+        int IJsonVariable.Depth
+            => 0;
+
+        /// <inheritdoc/>
+        string IJsonVariable.Name
+            => Name ?? throw new InvalidOperationException("Cannot access name until reference variable initializes");
+
+        /// <inheritdoc/>
+        string IJsonVariable.VariableName
+            => VariableName ?? throw new InvalidOperationException("Cannot access variable name until reference variable initializes");
+
+        /// <inheritdoc/>
+        Type IJsonVariable.InnerType
+            => typeof(T);
+
+        /// <inheritdoc/>
+        IEnumerable<JObject> IJsonVariable.GetObjectsAtDepth(int targetDepth)
+            => Array.Empty<JObject>();
+    }
+
+    /// <summary>
     ///     Represents a json value used within queries.
     /// </summary>
     /// <typeparam name="T">The inner type that the json value represents.</typeparam>
-    public class JsonVariable<T> : IJsonVariable
+    public class JsonCollectionVariable<T> : IJsonVariable
     {
         /// <summary>
         ///     Gets the name of the json variable.
@@ -71,6 +122,9 @@ namespace EdgeDB
         internal bool IsObjectArray
             => _array.All(x => x is JObject);
 
+        /// <summary>
+        ///     Gets the variable name of the current json variable.
+        /// </summary>
         internal string VariableName { get; }
 
         /// <summary>
@@ -79,12 +133,12 @@ namespace EdgeDB
         private readonly JArray _array;
 
         /// <summary>
-        ///     Constructs a new <see cref="JsonVariable{T}"/>.
+        ///     Constructs a new <see cref="JsonCollectionVariable{T}"/>.
         /// </summary>
         /// <param name="name">The name of the variable.</param>
         /// <param name="varName">The name of the edgedb variable containing the json value</param>
         /// <param name="array">The <see cref="JArray"/> containing all the json objects.</param>
-        internal JsonVariable(string name, string varName, JArray array)
+        internal JsonCollectionVariable(string name, string varName, JArray array)
         {
             _array = array;
             VariableName = varName;
@@ -135,8 +189,10 @@ namespace EdgeDB
                 {
                     case JObject jObject:
                         return CalculateNodeDepth(jObject, depth + 1);
-                    case JArray jArray:
+                    case JArray jArray when jArray.Any():
                         return jArray.Max(x => x is JObject subNode ? CalculateNodeDepth(subNode, depth + 1) : depth);
+                    case JArray jArray:
+                        return -1; // empty array has no depth
                     default:
                         return depth;
                 }

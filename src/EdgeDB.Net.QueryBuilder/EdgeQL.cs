@@ -9,6 +9,9 @@ namespace EdgeDB
 {
     public sealed partial class EdgeQL
     {
+        public static JsonReferenceVariable<T> AsJson<T>(T value)
+            => new JsonReferenceVariable<T>(value);
+
         [EquivalentOperator(typeof(EdgeDB.Operators.LinksAddLink))]
         public static TType[] AddLink<TType>(IQuery<TType> element)
             => default!;

@@ -32,7 +32,7 @@ namespace EdgeDB
             }
 
             // does the type have a single property that is exclusive?
-            if(type.Properties!.Count(x => x.IsExclusive) == 1)
+            if(type.Properties!.Count(x => x.Name != "id" && x.IsExclusive) == 1)
             {
                 return $"unless conflict on .{type.Properties!.First(x => x.IsExclusive).Name}";
             }

@@ -18,10 +18,64 @@ namespace EdgeDB.Translators.Expressions
         {
             // deconstruct the member access tree.
             var deconstructed = ExpressionUtils.DisassembleExpression(expression).ToArray();
+
+            var baseExpression = deconstructed.LastOrDefault();
             
+            // if the base class is context
+            if (baseExpression is not null && baseExpression.Type.IsAssignableTo(typeof(QueryContext)))
+            {
+                // switch the name of the accessed member
+                var accessExpression = deconstructed[^2];
+                if(accessExpression is not MemberExpression memberExpression)
+                    throw new NotSupportedException($"Cannot use expression type {accessExpression.NodeType} for a contextual member access");
+
+                switch (memberExpression.Member.Name)
+                {
+                    case nameof(QueryContext<object>.Variables):
+                        // get the reference
+                        var target = deconstructed[^3];
+
+                        // switch the type of the target
+                        switch (target)
+                        {
+                            case MemberExpression targetMember:
+                                if (targetMember.Type.IsAssignableTo(typeof(IJsonVariable)))
+                                {
+                                    // pull the paths coming off of target member
+                                    var path = deconstructed[0].ToString()[(targetMember.ToString().Length + 6)..].Split('.', options: StringSplitOptions.RemoveEmptyEntries);
+
+                                    // get the name of the json value
+                                    var jsonGlobal = context.Globals.FirstOrDefault(x => x.Name == targetMember.Member.Name);
+
+                                    if (jsonGlobal is null)
+                                        throw new InvalidOperationException($"Cannot access json object \"{targetMember.Member.Name}\": No global found!");
+
+                                    // verify the global is json
+                                    if (jsonGlobal.Reference is not IJsonVariable jsonVariable)
+                                        throw new InvalidOperationException($"The global \"{jsonGlobal.Name}\" is not a json value");
+
+                                    // get the scalar type to cast to
+                                    if (!EdgeDBTypeUtils.TryGetScalarType(deconstructed[0].Type, out var scalarInfo))
+                                        throw new InvalidOperationException($"json value access must be scalar, path: {deconstructed[0].ToString()}");
+
+
+                                    return $"<{scalarInfo}>json_get({jsonGlobal.Name}, {string.Join(", ", path.Select(x => $"'{x}'"))})";
+                                }
+
+                                if (deconstructed.Length != 3)
+                                    throw new NotSupportedException("Cannot use nested values for variable access");
+                                
+                                // return the name of the member
+                                return targetMember.Member.Name;
+                            default:
+                                throw new NotSupportedException($"Cannot use expression type {target.NodeType} as a variable access");
+                        }
+                }
+            }
+
             // if the resolute expression is a constant expression, assume
             // were in a set-like context and add it as a variable.
-            if (deconstructed.LastOrDefault() is ConstantExpression constant)
+            if (baseExpression is ConstantExpression constant)
             {
                 // walk thru the reference tree, you can imagine this as a variac pointer resolution.
                 object? refHolder = constant.Value;

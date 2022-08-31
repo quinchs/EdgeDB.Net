@@ -38,7 +38,7 @@ namespace EdgeDB.Translators.Expressions
         {
             // if the method references context or a parameter to our current root lambda
             var disassembledInstance = expression.Object is null 
-                ? Array.Empty<Expression> ()
+                ? Array.Empty<Expression>()
                 : ExpressionUtils.DisassembleExpression(expression.Object).ToArray();
             
             var isInstanceReferenceToContext = expression.Object?.Type == typeof(QueryContext) || context.RootExpression.Parameters.Any(x => disassembledInstance.Contains(x));
@@ -55,6 +55,8 @@ namespace EdgeDB.Translators.Expressions
             {
                 switch (expression.Method.Name)
                 {
+                    case nameof(QueryContext.Global):
+                        return TranslateExpression(expression.Arguments[0], context.Enter(x => x.StringWithoutQuotes = true));
                     case nameof(QueryContext.Local):
                         {
                             // validate the type context, property should exist within the type.

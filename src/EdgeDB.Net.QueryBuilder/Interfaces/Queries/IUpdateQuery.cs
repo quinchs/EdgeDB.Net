@@ -11,7 +11,8 @@ namespace EdgeDB.Interfaces.Queries
     ///     Represents a generic <c>UPDATE</c> query used within a <see cref="IQueryBuilder"/>.
     /// </summary>
     /// <typeparam name="TType">The type which this <c>UPDATE</c> query is querying against.</typeparam>
-    public interface IUpdateQuery<TType> : IGroupable<TType>, IMultiCardinalityExecutable<TType>
+    /// <typeparam name="TContext">The type of context representing the current builder.</typeparam>
+    public interface IUpdateQuery<TType, TContext> : IGroupable<TType>, IMultiCardinalityExecutable<TType>
     {
         /// <summary>
         ///     Filters the current update query by the given predicate.
@@ -21,6 +22,6 @@ namespace EdgeDB.Interfaces.Queries
         IMultiCardinalityExecutable<TType> Filter(Expression<Func<TType, bool>> filter);
 
         /// <inheritdoc cref="Filter(Expression{Func{TType, bool}})"/>
-        IMultiCardinalityExecutable<TType> Filter(Expression<Func<TType, QueryContext, bool>> filter);
+        IMultiCardinalityExecutable<TType> Filter(Expression<Func<TType, TContext, bool>> filter);
     }
 }

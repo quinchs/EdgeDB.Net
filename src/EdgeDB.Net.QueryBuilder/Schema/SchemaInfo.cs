@@ -40,6 +40,10 @@ namespace EdgeDB.Schema
         ///     otherwise <see langword="false"/>.
         /// </returns>
         public bool TryGetObjectInfo(Type type, [MaybeNullWhen(false)] out ObjectType info)
-            => (info = Types.FirstOrDefault(x => x.CleanedName == type.GetEdgeDBTypeName())) != null;
+            => (info = Types.FirstOrDefault(x =>
+            {
+                var name = type.GetEdgeDBTypeName();
+                return name == x.CleanedName || name == x.Name;
+            })) != null;
     }
 }
