@@ -61,20 +61,6 @@ namespace EdgeDB.ExampleApp.Examples
 
         private static async Task QueryBuilderDemo(EdgeDBClient client)
         {
-            var test = QueryBuilder.With(new
-            {
-                Args = EdgeQL.AsJson(new ConstraintPerson
-                {
-                    Name = "Example",
-                    Email = "example@example.com"
-                })
-            }).Select(ctx => new
-            {
-                PassedName = ctx.Variables.Args.Value.Name,
-                PassedEmail = ctx.Variables.Args.Value.Email
-            }).Build();
-
-
             // Selecting a type with autogen shape
             var query = QueryBuilder.Select<LinkPerson>().Build().Prettify();
 
@@ -145,6 +131,20 @@ namespace EdgeDB.ExampleApp.Examples
                     Email = ctx.Include<string>(),
                 })
             }).Build().Prettify();
+
+            // With object variables
+            query = QueryBuilder.With(new
+            {
+                Args = EdgeQL.AsJson(new ConstraintPerson
+                {
+                    Name = "Example",
+                    Email = "example@example.com"
+                })
+            }).Select(ctx => new
+            {
+                PassedName = ctx.Variables.Args.Value.Name,
+                PassedEmail = ctx.Variables.Args.Value.Email
+            }).Build();
 
             // Inserting a new type
             var person = new LinkPerson

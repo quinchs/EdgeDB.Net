@@ -336,11 +336,12 @@ namespace EdgeDB
                 {
                     _queryGlobals.Add(new QueryGlobal(property.Name, new SubQuery($"(select {property.PropertyType.GetEdgeDBTypeName()} filter .id = <uuid>'{id}')")));
                 }
-                else if (property.PropertyType.IsAssignableTo(typeof(IJsonVariable)))
+                else if (ReflectionUtils.IsSubTypeOfGenericType(typeof(JsonReferenceVariable<>), property.PropertyType))
                 {
                     // Serialize and add as global and variable
+                    var referenceValue = property.PropertyType.GetProperty("Value")!.GetValue(value);
                     var jsonVarName = QueryUtils.GenerateRandomVariableName();
-                    _queryVariables.Add(jsonVarName, DataTypes.Json.Serialize(value));
+                    _queryVariables.Add(jsonVarName, DataTypes.Json.Serialize(referenceValue));
                     _queryGlobals.Add(new QueryGlobal(property.Name, new SubQuery($"<json>${jsonVarName}"), value));
                 }
                 else 
