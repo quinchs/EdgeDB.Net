@@ -8,7 +8,7 @@ using Serilog;
 
 void Test()
 {
-    var func = (int x) => x += 1;
+    var func = (int x) => (1,2);
     var result = ExpressionParser.Parse<Func<int, int>>(func);
 
 }

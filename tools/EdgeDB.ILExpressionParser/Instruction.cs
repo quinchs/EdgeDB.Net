@@ -16,25 +16,20 @@ namespace EdgeDB.ILExpressionParser
 
         private readonly MethodBase _rootMethod;
 
-        private readonly void* _op;
-
         public Instruction(OpCode code, object? oprand, MethodBase method)
         {
-            _op = Unsafe.AsPointer(ref oprand);
             OpCode = code;
             Oprand = oprand;
             _rootMethod = method;
         }
-
-        public T OprandAs<T>()
-            => Unsafe.Read<T>(_op);
 
         public MethodBase OprandAsMethod()
         {
             if (OpCode.OperandType != OperandType.InlineMethod && OpCode.OperandType != OperandType.InlineTok)
                 throw new InvalidOperationException("The current instruction doesn't reference a method");
 
-            return _rootMethod.Module.ResolveMethod(OprandAs<int>(), _rootMethod.DeclaringType!.GenericTypeArguments, _rootMethod.GetGenericArguments())!;
+            var asm = Assembly.GetExecutingAssembly();
+            return _rootMethod.Module.ResolveMethod((int)Oprand!, _rootMethod.DeclaringType!.GenericTypeArguments, _rootMethod.GetGenericArguments())!;
         }
 
         public Type OprandAsType()
@@ -42,7 +37,7 @@ namespace EdgeDB.ILExpressionParser
             if (OpCode.OperandType != OperandType.InlineType && OpCode.OperandType != OperandType.InlineTok)
                 throw new InvalidOperationException("The current instruction doesn't reference a type");
 
-            return _rootMethod.Module.ResolveType(OprandAs<int>(), _rootMethod.DeclaringType!.GenericTypeArguments, _rootMethod.GetGenericArguments())!;
+            return _rootMethod.Module.ResolveType((int)Oprand!, _rootMethod.DeclaringType!.GenericTypeArguments, _rootMethod.GetGenericArguments())!;
         }
 
         public FieldInfo OprandAsField()
@@ -50,7 +45,7 @@ namespace EdgeDB.ILExpressionParser
             if (OpCode.OperandType != OperandType.InlineField && OpCode.OperandType != OperandType.InlineTok)
                 throw new InvalidOperationException("The current instruction doesn't reference a field");
 
-            return _rootMethod.Module.ResolveField(OprandAs<int>(), _rootMethod.DeclaringType!.GenericTypeArguments, _rootMethod.GetGenericArguments())!;
+            return _rootMethod.Module.ResolveField((int)Oprand!, _rootMethod.DeclaringType!.GenericTypeArguments, _rootMethod.GetGenericArguments())!;
         }
 
         public string OprandAsString()
@@ -58,7 +53,7 @@ namespace EdgeDB.ILExpressionParser
             if (OpCode.OperandType != OperandType.InlineString)
                 throw new InvalidOperationException("The current instruction doesn't reference a string");
 
-            return _rootMethod.Module.ResolveString(OprandAs<int>());
+            return _rootMethod.Module.ResolveString((int)Oprand!);
         }
         
         public MemberInfo OprandAsMember()
@@ -66,37 +61,37 @@ namespace EdgeDB.ILExpressionParser
             if (OpCode.OperandType != OperandType.InlineTok)
                 throw new InvalidOperationException("Instruction does not reference a member.");
 
-            return _rootMethod.Module.ResolveMember(OprandAs<int>())!;
+            return _rootMethod.Module.ResolveMember((int)Oprand!)!;
         }
 
         public byte[] OprandAsSignature()
         {
             if (OpCode.OperandType != OperandType.InlineSig)
                 throw new InvalidOperationException("Instruction does not reference a signature.");
-            return _rootMethod.Module.ResolveSignature(OprandAs<int>());
+            return _rootMethod.Module.ResolveSignature((int)Oprand!);
         }
 
         public object? ParseOprand()
         {
             return OpCode.OperandType switch
             {
-                OperandType.InlineBrTarget => OprandAs<Label>(),
+                OperandType.InlineBrTarget => (Label)Oprand!,
                 OperandType.InlineField => OprandAsField(),
-                OperandType.InlineI => OprandAs<int>(),
-                OperandType.InlineI8 => OprandAs<long>(),
+                OperandType.InlineI => (int)Oprand!,
+                OperandType.InlineI8 => (long)Oprand!,
                 OperandType.InlineMethod => OprandAsMethod(),
                 OperandType.InlineNone => null,
-                OperandType.InlineR => OprandAs<double>(),
+                OperandType.InlineR => (double)Oprand!,
                 OperandType.InlineSig => OprandAsSignature(),
                 OperandType.InlineString => OprandAsString(),
-                OperandType.InlineSwitch => OprandAs<int>(),
+                OperandType.InlineSwitch => (int)Oprand!,
                 OperandType.InlineTok => OprandAsMember(),
                 OperandType.InlineType => OprandAsType(),
-                OperandType.InlineVar => OprandAs<short>(),
-                OperandType.ShortInlineBrTarget => OprandAs<Label>(),
-                OperandType.ShortInlineI => OprandAs<byte>(),
-                OperandType.ShortInlineR => OprandAs<float>(),
-                OperandType.ShortInlineVar => OprandAs<byte>(),
+                OperandType.InlineVar => (short)Oprand!,
+                OperandType.ShortInlineBrTarget => (Label)Oprand!,
+                OperandType.ShortInlineI => (byte)Oprand!,
+                OperandType.ShortInlineR => (float)Oprand!,
+                OperandType.ShortInlineVar => (byte)Oprand!,
 
                 _ => Oprand
             };

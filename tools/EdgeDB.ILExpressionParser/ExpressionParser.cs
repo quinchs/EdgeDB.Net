@@ -323,25 +323,25 @@ namespace EdgeDB.ILExpressionParser
                         break;
                     case OpCodes.Ldc_i4 or OpCodes.Ldc_i4_s:
                         {
-                            var value = instruction.OprandAs<int>();
+                            var value = (int)instruction.Oprand!;
                             expressionStack.Push(Expression.Constant(value));
                         }
                         break;
                     case OpCodes.Ldc_i8:
                         {
-                            var value = instruction.OprandAs<long>();
+                            var value = (long)instruction.Oprand!;
                             expressionStack.Push(Expression.Constant(value));
                         }
                         break;
                     case OpCodes.Ldc_r8:
                         {
-                            var value = instruction.OprandAs<double>();
+                            var value = (double)instruction.Oprand!;
                             expressionStack.Push(Expression.Constant(value));
                         }
                         break;
                     case OpCodes.Ldc_r4:
                         {
-                            var value = instruction.OprandAs<float>();
+                            var value = (float)instruction.Oprand!;
                             expressionStack.Push(Expression.Constant(value));
                         }
                         break;
@@ -376,7 +376,7 @@ namespace EdgeDB.ILExpressionParser
                         break;
                     case OpCodes.Ldloc or OpCodes.Ldloc_s:
                         {
-                            var local = reader.MethodBody.LocalVariables[instruction.OprandAs<int>()];
+                            var local = reader.MethodBody.LocalVariables[(int)instruction.Oprand!];
                             expressionStack.Push(Expression.Variable(local.LocalType, $"local_{local.LocalIndex}"));
                         }
                         break;
@@ -407,14 +407,14 @@ namespace EdgeDB.ILExpressionParser
                     case OpCodes.Stloc:
                         {
                             var val = expressionStack.Pop();
-                            var indx = instruction.OprandAs<short>();
+                            var indx = (short)instruction.Oprand!;
                             expressionStack.Push(Expression.Assign(locals[indx], val));
                         }
                         break;
                     case OpCodes.Starg or OpCodes.Starg_s:
                         {
                             var val = expressionStack.Pop();
-                            var indx = instruction.OprandAs<short>();
+                            var indx = (short)instruction.Oprand!;
                             expressionStack.Push(Expression.Assign(arguments[indx], val));
                         }
                         break;
@@ -673,7 +673,7 @@ namespace EdgeDB.ILExpressionParser
                         {
                             var constructor = (ConstructorInfo)instruction.OprandAsMethod();
                             Expression[] args = new Expression[constructor.GetParameters().Length];
-                            for(int i = args.Length - 1; i >= 0; i++)
+                            for(int i = args.Length - 1; i >= 0; i--)
                                 args[i] = expressionStack.Pop();
                             expressionStack.Push(Expression.New(constructor, args));
                         }

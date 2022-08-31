@@ -54,7 +54,7 @@ namespace EdgeDB.ILExpressionParser
             {
                 case OperandType.InlineSwitch:
                     oprand = new Label(_position);
-                    var length = BitConverter.ToInt32(_il[_position..sizeof(int)]);
+                    var length = BitConverter.ToInt32(_il[_position..(_position + sizeof(int))]);
                     _position += 4 + 4 * length;
                     break;
                 case OperandType.InlineI:
@@ -64,27 +64,27 @@ namespace EdgeDB.ILExpressionParser
                 case OperandType.InlineField:
                 case OperandType.InlineType:
                 case OperandType.InlineTok:
-                    oprand = BitConverter.ToInt32(_il[_position..sizeof(int)]);
+                    oprand = BitConverter.ToInt32(_il[_position..(_position + sizeof(int))]);
                     _position += sizeof(int);
                     break;
                 case OperandType.InlineI8:
-                    oprand = BitConverter.ToInt64(_il[_position..sizeof(long)]);
+                    oprand = BitConverter.ToInt64(_il[_position..(_position + sizeof(long))]);
                     _position += sizeof(long);
                     break;
                 case OperandType.InlineR:
-                    oprand = BitConverter.ToDouble(_il[_position..sizeof(double)]);
+                    oprand = BitConverter.ToDouble(_il[_position..(_position + sizeof(double))]);
                     _position += sizeof(double);
                     break;
                 case OperandType.InlineVar:
-                    oprand = BitConverter.ToInt16(_il[_position..sizeof(short)]);
+                    oprand = BitConverter.ToInt16(_il[_position..(_position + sizeof(short))]);
                     _position += sizeof(short);
                     break;
                 case OperandType.ShortInlineR:
-                    oprand = BitConverter.ToSingle(_il[_position..sizeof(float)]);
+                    oprand = BitConverter.ToSingle(_il[_position..(_position + sizeof(float))]);
                     _position += sizeof(float);
                     break;
                 case OperandType.InlineBrTarget:
-                    oprand = new Label(BitConverter.ToInt32(_il[_position..sizeof(int)]) + _position + 4);
+                    oprand = new Label(BitConverter.ToInt32(_il[_position..(_position + sizeof(int))]) + _position + 4);
                     _position += sizeof(int);
                     break;
                 case OperandType.ShortInlineBrTarget:
