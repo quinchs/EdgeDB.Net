@@ -313,8 +313,8 @@ namespace EdgeDB.QueryNodes
 
                             // return a slice operator for multi links or a index operator for single links
                             return isArray
-                                ? $"{edgedbName} := distinct array_unpack({mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_from') ?? 0:<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_to') ?? 0])"
-                                : $"{edgedbName} := {mappingName}_d{indexCopy + 1}[<int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({iterationName}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
+                                ? $"{edgedbName} := (select {mappingName}_d{indexCopy + 1} offset <int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_from') ?? 0 limit <int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_to') ?? 0)"
+                                : $"{edgedbName} := (select {mappingName}_d{indexCopy + 1} offset <int64>json_get({iterationName}, '{x.Name}', '{mappingName}_depth_index') limit 1) if json_typeof(json_get({iterationName}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
                         }
 
                         // if its a scalar type, use json_get to pull the value and cast it to our property
@@ -335,7 +335,7 @@ namespace EdgeDB.QueryNodes
 
                     // add the iteration and turn it into an array so we can use the index operand
                     // during our query stage
-                    return $"array_agg((for {iterationName} in json_array_unpack(<json>${variableName}) union {insertStatement}))";
+                    return $"(for {iterationName} in (<json>${variableName}) union {insertStatement})";
                 });
 
                 // tell the builder that this query requires introspection
@@ -386,8 +386,8 @@ namespace EdgeDB.QueryNodes
                 {
                     // return a slice operator for multi links or a index operator for single links
                     return isArray
-                               ? $"{edgedbName} := distinct array_unpack({mappingName}_d1[<int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_from') ?? 0:<int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_to') ?? 0])"
-                               : $"{edgedbName} := {mappingName}_d1[<int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_index')] if json_typeof(json_get({jsonValue.Name}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
+                        ? $"{edgedbName} := (select {mappingName}_d1 offset <int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_from') ?? 0 limit <int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_to') ?? 0)"
+                        : $"{edgedbName} := (select {mappingName}_d1 offset <int64>json_get({jsonValue.Name}, '{x.Name}', '{mappingName}_depth_index') limit 1) if json_typeof(json_get({jsonValue.Name}, '{x.Name}')) != 'null' else <{x.PropertyType.GetEdgeDBTypeName()}>{{}}";
                 }
 
                 // if its a scalar type, use json_get to pull the value and cast it to our property

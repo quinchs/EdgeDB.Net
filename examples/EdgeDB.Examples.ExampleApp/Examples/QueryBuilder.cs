@@ -20,7 +20,6 @@ namespace EdgeDB.ExampleApp.Examples
 
         public class LinkPerson
         {
-            public Guid Id { get; set; }
             public string? Name { get; set; }
             public string? Email { get; set; }
             public LinkPerson? BestFriend { get; set; }
