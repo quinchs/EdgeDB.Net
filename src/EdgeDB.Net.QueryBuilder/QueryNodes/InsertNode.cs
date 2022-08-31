@@ -335,7 +335,7 @@ namespace EdgeDB.QueryNodes
 
                     // add the iteration and turn it into an array so we can use the index operand
                     // during our query stage
-                    return $"(for {iterationName} in (<json>${variableName}) union {insertStatement})";
+                    return $"(for {iterationName} in json_array_unpack(<json>${variableName}) union {insertStatement})";
                 });
 
                 // tell the builder that this query requires introspection
