@@ -21,9 +21,9 @@ namespace EdgeDB
         public static IQueryBuilder<dynamic, QueryContext<TVariables>> With<TVariables>(TVariables variables)
             => QueryBuilder<dynamic>.With(variables);
 
-        /// <inheritdoc cref="IQueryBuilder{TType, TContext}.For(IEnumerable{TType}, Expression{Func{JsonVariable{TType}, IQueryBuilder}})"/>
+        /// <inheritdoc cref="IQueryBuilder{TType, TContext}.For(IEnumerable{TType}, Expression{Func{JsonCollectionVariable{TType}, IQueryBuilder}})"/>
         public static IMultiCardinalityExecutable<TType> For<TType>(IEnumerable<TType> collection, 
-            Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator)
+            Expression<Func<JsonCollectionVariable<TType>, IQueryBuilder>> iterator)
             => new QueryBuilder<TType>().For(collection, iterator);
 
         /// <inheritdoc cref="IQueryBuilder{TType, QueryContext}.Select()"/>
@@ -336,6 +336,13 @@ namespace EdgeDB
                 {
                     _queryGlobals.Add(new QueryGlobal(property.Name, new SubQuery($"(select {property.PropertyType.GetEdgeDBTypeName()} filter .id = <uuid>'{id}')")));
                 }
+                else if (property.PropertyType.IsAssignableTo(typeof(IJsonVariable)))
+                {
+                    // Serialize and add as global and variable
+                    var jsonVarName = QueryUtils.GenerateRandomVariableName();
+                    _queryVariables.Add(jsonVarName, DataTypes.Json.Serialize(value));
+                    _queryGlobals.Add(new QueryGlobal(property.Name, new SubQuery($"<json>${jsonVarName}"), value));
+                }
                 else 
                     throw new InvalidOperationException($"Cannot serialize {property.Name}: No serialization strategy found for {property.PropertyType}");
             }
@@ -343,7 +350,7 @@ namespace EdgeDB
             return EnterNewContext<QueryContext<TVariables>>();
         }
 
-        public IMultiCardinalityExecutable<TType> For(IEnumerable<TType> collection, Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator)
+        public IMultiCardinalityExecutable<TType> For(IEnumerable<TType> collection, Expression<Func<JsonCollectionVariable<TType>, IQueryBuilder>> iterator)
         {
             AddNode<ForNode>(new ForContext(typeof(TType))
             {

@@ -27,7 +27,7 @@ namespace EdgeDB
         /// <param name="collection">The collection to iterate over.</param>
         /// <param name="iterator">The iterator for the <c>UNION</c> statement.</param>
         /// <returns>The current query.</returns>
-        IMultiCardinalityExecutable<TType> For(IEnumerable<TType> collection, Expression<Func<JsonVariable<TType>, IQueryBuilder>> iterator);
+        IMultiCardinalityExecutable<TType> For(IEnumerable<TType> collection, Expression<Func<JsonCollectionVariable<TType>, IQueryBuilder>> iterator);
 
         /// <summary>
         ///     Adds a <c>WITH</c> statement whos variables are the properties defined in <paramref name="variables"/>.

@@ -47,8 +47,8 @@ namespace EdgeDB.QueryNodes
                     return x switch
                     {
                         _ when x.Type == typeof(QueryContext) => new QueryContext(),
-                        _ when ReflectionUtils.IsSubTypeOfGenericType(typeof(JsonVariable<>), x.Type)
-                            => typeof(JsonVariable<>).MakeGenericType(Context.CurrentType)
+                        _ when ReflectionUtils.IsSubTypeOfGenericType(typeof(JsonCollectionVariable<>), x.Type)
+                            => typeof(JsonCollectionVariable<>).MakeGenericType(Context.CurrentType)
                                 .GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, new Type[] { typeof(string), typeof(string), typeof(JArray)})!
                                 .Invoke(new object?[] { name, varName, jArray })!,
                         _ => throw new ArgumentException($"Cannot use {x.Type} as a parameter to a 'FOR' expression")

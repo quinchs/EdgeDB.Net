@@ -39,6 +39,29 @@ namespace EdgeDB.Translators.Expressions
                         switch (target)
                         {
                             case MemberExpression targetMember:
+                                if (targetMember.Type.IsAssignableTo(typeof(IJsonVariable)))
+                                {
+                                    // pull the paths coming off of target member
+                                    var path = deconstructed[0].ToString()[(targetMember.ToString().Length + 6)..].Split('.', options: StringSplitOptions.RemoveEmptyEntries);
+
+                                    // get the name of the json value
+                                    var jsonGlobal = context.Globals.FirstOrDefault(x => x.Name == targetMember.Member.Name);
+
+                                    if (jsonGlobal is null)
+                                        throw new InvalidOperationException($"Cannot access json object \"{targetMember.Member.Name}\": No global found!");
+
+                                    // verify the global is json
+                                    if (jsonGlobal.Reference is not IJsonVariable jsonVariable)
+                                        throw new InvalidOperationException($"The global \"{jsonGlobal.Name}\" is not a json value");
+
+                                    // get the scalar type to cast to
+                                    if (!EdgeDBTypeUtils.TryGetScalarType(deconstructed[0].Type, out var scalarInfo))
+                                        throw new InvalidOperationException($"json value access must be scalar, path: {deconstructed[0].ToString()}");
+
+
+                                    return $"<{scalarInfo}>json_get({jsonGlobal.Name}, {string.Join(", ", path.Select(x => $"'{x}'"))})";
+                                }
+
                                 if (deconstructed.Length != 3)
                                     throw new NotSupportedException("Cannot use nested values for variable access");
                                 
