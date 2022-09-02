@@ -4,22 +4,22 @@ namespace EdgeDB.Codecs
 {
     internal class Object : ICodec<object>, IArgumentCodec<object>
     {
-        private readonly ICodec[] _innerCodecs;
-        private readonly string[] _propertyNames;
+        internal readonly ICodec[] InnerCodecs;
+        internal readonly string[] PropertyNames;
 
         internal Object(ICodec[] innerCodecs, string[] propertyNames)
         {
-            _innerCodecs = innerCodecs;
-            _propertyNames = propertyNames;
+            InnerCodecs = innerCodecs;
+            PropertyNames = propertyNames;
         }
 
         public object? Deserialize(ref PacketReader reader)
         {
             var numElements = reader.ReadInt32();
 
-            if (_innerCodecs.Length != numElements)
+            if (InnerCodecs.Length != numElements)
             {
-                throw new ArgumentException($"codecs mismatch for tuple: expected {numElements} codecs, got {_innerCodecs.Length} codecs");
+                throw new ArgumentException($"codecs mismatch for tuple: expected {numElements} codecs, got {InnerCodecs.Length} codecs");
             }
 
             dynamic data = new ExpandoObject();
@@ -29,7 +29,7 @@ namespace EdgeDB.Codecs
             {
                 // reserved
                 reader.Skip(4);
-                var name = _propertyNames[i];
+                var name = PropertyNames[i];
                 var length = reader.ReadInt32();
 
                 if(length is -1)
@@ -42,7 +42,7 @@ namespace EdgeDB.Codecs
 
                 object? value;
 
-                value = _innerCodecs[i].Deserialize(innerData);
+                value = InnerCodecs[i].Deserialize(innerData);
 
                 dataDictionary.Add(name, value);
             }
@@ -60,7 +60,7 @@ namespace EdgeDB.Codecs
             object?[]? values = null;
 
             if (value is IDictionary<string, object?> dict)
-                values = _propertyNames.Select(x => dict[x]).ToArray();
+                values = PropertyNames.Select(x => dict[x]).ToArray();
             else if (value is object?[] arr)
                 value = arr;
 
@@ -73,7 +73,7 @@ namespace EdgeDB.Codecs
             for (int i = 0; i != values.Length; i++)
             {
                 var element = values[i];
-                var innerCodec = _innerCodecs[i];
+                var innerCodec = InnerCodecs[i];
 
                 // reserved
                 innerWriter.Write(0);

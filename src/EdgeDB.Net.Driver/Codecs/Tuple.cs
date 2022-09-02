@@ -5,20 +5,20 @@ namespace EdgeDB.Codecs
 {
     internal class Tuple : ICodec<TransientTuple>
     {
-        private readonly ICodec[] _innerCodecs;
+        internal readonly ICodec[] InnerCodecs;
         
         public Tuple(ICodec[] innerCodecs)
         {
-            _innerCodecs = innerCodecs;
+            InnerCodecs = innerCodecs;
         }
 
         public TransientTuple Deserialize(ref PacketReader reader)
         {
             var numElements = reader.ReadInt32();
 
-            if(_innerCodecs.Length != numElements)
+            if(InnerCodecs.Length != numElements)
             {
-                throw new ArgumentException($"codecs mismatch for tuple: expected {numElements} codecs, got {_innerCodecs.Length} codecs");
+                throw new ArgumentException($"codecs mismatch for tuple: expected {numElements} codecs, got {InnerCodecs.Length} codecs");
             }
 
             // deserialize our values
@@ -41,10 +41,10 @@ namespace EdgeDB.Codecs
                 reader.ReadBytes(length, out var data);
 
                 var innerReader = new PacketReader(data);
-                values[i] = _innerCodecs[i].Deserialize(ref innerReader);
+                values[i] = InnerCodecs[i].Deserialize(ref innerReader);
             }
 
-            return new TransientTuple(_innerCodecs.Select(x => x.ConverterType).ToArray(), values);
+            return new TransientTuple(InnerCodecs.Select(x => x.ConverterType).ToArray(), values);
         }
 
         public void Serialize(PacketWriter writer, TransientTuple value)
