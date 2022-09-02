@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace EdgeDB.Serializer
 {
+    internal delegate void OnObjectCreated(object obj, Guid id);
     /// <summary>
     ///     Represents the class used to build types from edgedb query results.
     /// </summary>
@@ -21,10 +22,12 @@ namespace EdgeDB.Serializer
         /// </remarks>
         public static INamingStrategy NamingStrategy { get; set; }
 
-        private readonly static ConcurrentDictionary<Type, TypeDeserializeInfo> _typeInfo = new();
         internal static readonly INamingStrategy AttributeNamingStrategy;
+        internal static event OnObjectCreated? OnObjectCreated;
+        
+        private readonly static ConcurrentDictionary<Type, TypeDeserializeInfo> _typeInfo = new();
         private readonly static List<string> _scannedAssemblies;
-
+        
         static TypeBuilder()
         {
             _scannedAssemblies = new();
@@ -126,15 +129,15 @@ namespace EdgeDB.Serializer
                                    type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, new Type[] { typeof(IDictionary<string, object?>) })
                                        ?.GetCustomAttribute<EdgeDBDeserializerAttribute>() != null;
 
-            // allow abstract passthru
-            return type.IsAbstract ? true : (type.IsClass || type.IsValueType) && !type.IsSealed && validConstructor;
+            // allow abstract & anon types passthru
+            return type.IsAbstract || type.IsInterface || type.GetCustomAttribute<CompilerGeneratedAttribute>() != null || (type.IsClass || type.IsValueType) && !type.IsSealed && validConstructor;
         }
 
         internal static bool TryGetCollectionParser(Type type, out Func<Array, Type, object>? builder)
         {
             builder = null;
 
-            if (ReflectionUtils.IsSubclassOfRawGeneric(typeof(List<>), type))
+            if (ReflectionUtils.IsSubTypeOfGenericType(typeof(List<>), type))
                 builder = CreateDynamicList;
 
             return builder != null;
@@ -182,7 +185,7 @@ namespace EdgeDB.Serializer
                 return builder is not null ? builder(parsedArray, innerType) : parsedArray;
             }
 
-            throw new NoTypeConverter(target, value?.GetType() ?? typeof(object));
+            return ObjectBuilder.ConvertTo(target, value);
         }
 
         internal static bool TryGetCustomBuilder(this Type objectType, out MethodInfo? info)
@@ -256,6 +259,11 @@ namespace EdgeDB.Serializer
             }
         }
         #endregion
+
+        internal static void DispatchObjectCreate(object obj, Guid id)
+        {
+            OnObjectCreated?.Invoke(obj, id);
+        }
     }
 
     public delegate object TypeDeserializerFactory(IDictionary<string, object?> args);
@@ -288,8 +296,8 @@ namespace EdgeDB.Serializer
         }
 
         public void AddOrUpdateChildren(TypeDeserializeInfo child)
-           => Children[child._type] = child;
-        
+            => Children[child._type] = child;
+
         public void AddOrUpdateChildren(IEnumerable<TypeDeserializeInfo> children)
         {
             foreach (var child in children)
@@ -425,8 +433,19 @@ namespace EdgeDB.Serializer
                         prop.SetValue(instance, Enum.Parse(prop.PropertyType, str));
                         continue;
                     }
-
-                    prop.SetValue(instance, prop.PropertyType.ConvertValue(value));
+                    else
+                    {
+                        try
+                        {
+                            prop.SetValue(instance, prop.PropertyType.ConvertValue(value));
+                        }
+                        catch (Exception x)
+                        {
+                            var valueTypeName = value is IDictionary<string, object?> dict ? dict["__tname__"]?.ToString() : valueType.Name;
+                            throw new InvalidOperationException($"Failed to set {_type.Name}.{prop.Name} with type {valueTypeName} to {prop.PropertyType}.", x);
+                        }
+                    }
+                    
                 }
 
                 return instance;
@@ -434,7 +453,12 @@ namespace EdgeDB.Serializer
         }
 
         public object Deserialize(IDictionary<string, object?> args)
-            => _factory(args);
+        {
+            var result = _factory(args);
+            if (args.TryGetValue("id", out var rawGuid))
+                TypeBuilder.DispatchObjectCreate(result, (Guid)rawGuid!);
+            return result;
+        }
 
         public static implicit operator TypeDeserializerFactory(TypeDeserializeInfo info) => info._factory;
     }

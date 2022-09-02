@@ -45,6 +45,6 @@ namespace EdgeDB.Serializer
         /// </summary>
         /// <param name="property">The property info of which to convert its name.</param>
         /// <returns>The name defined in the schema.</returns>
-        public string GetName(PropertyInfo property);
+        public string GetName(MemberInfo property);
     }
 }

@@ -228,12 +228,12 @@ namespace EdgeDB
                     {
                         Capabilities = capabilities,
                         Query = query,
+                        ImplicitLimit = _config.ImplicitLimit,
                         Format = format,
                         ExpectedCardinality = cardinality ?? Cardinality.Many,
                         ExplicitObjectIds = _config.ExplicitObjectIds,
                         StateTypeDescriptorId = _stateDescriptorId,
                         StateData = stateBuf,
-                        ImplicitLimit = _config.ImplicitLimit,
                         ImplicitTypeNames = true, // used for type builder
                         ImplicitTypeIds = true,  // used for type builder
                     }, parseHandlerPredicate, alwaysReturnError: false, token: token).ConfigureAwait(false);
@@ -249,6 +249,7 @@ namespace EdgeDB
                     throw new MissingCodecException($"Cannot encode arguments, {inCodecInfo.Codec} is not a registered argument codec");
 
                 List<Data> receivedData = new();
+                CommandDataDescription d = default!;
 
                 bool handler(IReceiveable msg)
                 {
@@ -256,6 +257,9 @@ namespace EdgeDB
                     {
                         case Data data:
                             receivedData.Add(data);
+                            break;
+                        case CommandDataDescription dataDescription:
+                            d = dataDescription;
                             break;
                         case ErrorResponse err when err.ErrorCode is not ServerErrorCodes.ParameterTypeMismatchError:
                             throw new EdgeDBErrorException(err);
@@ -270,6 +274,7 @@ namespace EdgeDB
                 var executeResult = await Duplexer.DuplexAndSyncAsync(new Execute() 
                 {
                     Capabilities = capabilities,
+                    ImplicitLimit = _config.ImplicitLimit,
                     Query = query,
                     Format = format,
                     ExpectedCardinality = cardinality ?? Cardinality.Many,
@@ -279,7 +284,6 @@ namespace EdgeDB
                     ImplicitTypeNames = true, // used for type builder
                     ImplicitTypeIds = true,  // used for type builder
                     Arguments = argumentCodec?.SerializeArguments(args) ,
-                    ImplicitLimit = _config.ImplicitLimit,
                     InputTypeDescriptorId = inCodecInfo.Id,
                     OutputTypeDescriptorId = outCodecInfo.Id,
                 }, handler, alwaysReturnError: false, token: linkedToken).ConfigureAwait(false);

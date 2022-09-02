@@ -30,7 +30,7 @@ namespace EdgeDB.ContractResolvers
         private static JsonConverter? GetConverter(JsonProperty property, PropertyInfo propInfo, Type type, int depth)
         {
             // range type
-            if (ReflectionUtils.IsSubclassOfRawGeneric(typeof(DataTypes.Range<>), type))
+            if (ReflectionUtils.IsSubTypeOfGenericType(typeof(DataTypes.Range<>), type))
                 return RangeConverter.Instance;
 
             return null;

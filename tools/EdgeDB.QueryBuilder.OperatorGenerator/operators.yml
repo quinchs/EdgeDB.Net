@@ -1223,6 +1223,13 @@ sets:
       - parameters:
           - IEnumerable<TType>
 
+  - operator: "count({0})"
+    name: Count
+    return: long
+    functions:
+      - parameters:
+          - IQueryBuilder
+
   - operator: "enumerate({0})"
     name: Enumerate<TType>
     return: IEnumerable<Tuple<long, TType>>
@@ -1452,29 +1459,6 @@ math:
       - parameters:
           - IEnumerable<decimal>
         return: decimal
-
-links:
-  - operator: "+= {1}"
-    name: AddLink<TSource, TType>
-    return: TSource
-    functions:
-      - parameters:
-          - TSource source
-          - TType element
-        filter: "where TSource : IEnumerable<TType>?"
-  - operator: "-= {1}"
-    name: RemoveLink<TSource, TType>
-    return: TSource
-    functions:
-      - parameters:
-          - TSource source
-          - TType element
-        filter: "where TSource : IEnumerable<TType>?"
-
-variables:
-  - operator: "{0}"
-    name: Reference
-  
 
 enums:
   - name: DurationTruncateUnit

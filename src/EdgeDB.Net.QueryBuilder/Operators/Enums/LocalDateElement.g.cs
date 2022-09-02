@@ -1,6 +1,6 @@
 namespace EdgeDB
 {
-    [EnumSerializerAttribute(SerializationMethod.Lower)]
+    [EnumSerializer(SerializationMethod.Lower)]
     public enum LocalDateElement
     {
         Century,

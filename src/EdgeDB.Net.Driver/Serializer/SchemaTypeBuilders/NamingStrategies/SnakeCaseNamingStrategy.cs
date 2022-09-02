@@ -10,7 +10,7 @@ namespace EdgeDB.Serializer
 {
     public sealed class SnakeCaseNamingStrategy : INamingStrategy
     {
-        public string GetName(PropertyInfo property)
+        public string GetName(MemberInfo property)
         {
             return Regex.Replace(property.Name, "(?<!^)[A-Z]", x => $"_{x.Value}").ToLower();
         }

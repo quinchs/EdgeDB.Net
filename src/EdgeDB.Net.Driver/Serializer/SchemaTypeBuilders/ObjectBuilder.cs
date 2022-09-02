@@ -20,7 +20,7 @@ namespace EdgeDB
             return (TType?)ConvertTo(typeof(TType), value);
         }
 
-        private static object? ConvertTo(Type type, object? value)
+        internal static object? ConvertTo(Type type, object? value)
         {
             if (value is null)
             {
@@ -96,8 +96,15 @@ namespace EdgeDB
 
             }
 
-            var arr = Array.CreateInstance(strongInnerType ?? valueType.GenericTypeArguments[0], converted.Count);
-            Array.Copy(converted.ToArray(), arr, converted.Count);
+            Array arr;
+
+            if (converted.Any())
+            {
+                arr = Array.CreateInstance(strongInnerType ?? valueType.GenericTypeArguments[0], converted.Count);
+                Array.Copy(converted.ToArray(), arr, converted.Count);
+            }
+            else
+                arr = (Array)typeof(Array).GetMethod("Empty")!.MakeGenericMethod(strongInnerType!).Invoke(null, null)!;
 
             switch (targetType)
             {
@@ -119,17 +126,5 @@ namespace EdgeDB
                     }
             }
         }
-
-        private static bool IsValidProperty(PropertyInfo type)
-        {
-            var shouldIgnore = type.GetCustomAttribute<EdgeDBIgnoreAttribute>() is not null;
-
-            return !shouldIgnore && type.GetSetMethod() is not null;
-        }
-
-        private static bool IsValidTargetType(Type type) =>
-            (type.IsClass || type.IsValueType) && 
-            !type.IsSealed && 
-            type.GetConstructor(Array.Empty<Type>()) != null;
     }
 }
