@@ -141,13 +141,13 @@ namespace EdgeDB.Tests.Unit
             ExpectError<ConfigurationException>(ParseConnection(dsn: "edgedb:///db?host=host1:1111,host2:2222", envVars: new Dictionary<string, string>()
             {
                 {"EDGEDB_USER", "foo" }
-            }), "Query parameter 'host' cannot contain more than one host");
+            }), "DSN cannot contain more than one host");
         }
 
         [TestMethod]
         public void MultipleCompoundOptions()
         {
-            ExpectError<ConfigurationException>(ParseConnection(dsn: "edgedb:///db", configure: x => x.Hostname = "host1,host2", envVars: new Dictionary<string, string>()
+            ExpectError<ConfigurationException>(ParseConnection(dsn: "edgedb:///db", configure: x => x.Hostname = "host1", envVars: new Dictionary<string, string>()
             {
                 {"EDGEDB_USER", "foo" }
             }), "Cannot specify DSN and 'Hostname'; they are mutually exclusive");
@@ -192,15 +192,13 @@ namespace EdgeDB.Tests.Unit
         {
             Assert.IsNotNull(result.Exception);
             Assert.IsInstanceOfType(result.Exception, typeof(TError), $"Exception type {typeof(TError)} expected but got {result.Exception.GetType()}");
-            Assert.AreEqual(result.Exception.Message, message);
+            Assert.AreEqual(message, result.Exception.Message);
         }
 
         private static Result ParseConnection(string? dsn = null, Action<EdgeDBConnection>? configure = null, Dictionary<string, string>? envVars = null)
         {
             try
             {
-                EdgeDBConnection? inst = null;
-
                 // set envs
                 if(envVars is not null)
                 {
@@ -210,13 +208,7 @@ namespace EdgeDB.Tests.Unit
                     }
                 }
 
-                if (dsn is not null)
-                    inst = EdgeDBConnection.FromDSN(dsn);
-
-                if (configure is not null)
-                    configure(inst ??= new());
-
-                return inst ?? new();
+                return EdgeDBConnection.Parse(dsn: dsn, configure: configure, autoResolve: false);
             }
             catch (Exception x)
             {
