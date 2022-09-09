@@ -381,7 +381,7 @@ connectionDefinition:
         /// <exception cref="FileNotFoundException">The instances config file couldn't be found.</exception>
         public static EdgeDBConnection FromInstanceName(string name)
         {
-            var configPath = Path.Combine(ConfigUtils.CredentialsDir, $"{name}.json");
+            var configPath = Path.Combine(ConfigUtils.GetCredentialsDir(), $"{name}.json");
 
             return !File.Exists(configPath)
                 ? throw new FileNotFoundException($"Config file couldn't be found at {configPath}")

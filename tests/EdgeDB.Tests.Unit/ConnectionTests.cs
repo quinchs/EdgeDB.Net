@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EdgeDB.Tests.Unit
+namespace EdgeDB.Tests.Unit.Connection
 {
     [TestClass]
     public class ConnectionTests
