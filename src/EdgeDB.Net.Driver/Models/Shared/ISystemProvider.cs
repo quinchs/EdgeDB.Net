@@ -16,6 +16,7 @@ namespace EdgeDB.Abstractions
         char DirectorySeparatorChar { get; }
         bool DirectoryExists(string dir);
         bool IsRooted(string path);
+        string? GetEnvVariable(string name);
     }
 
     internal class DefaultSystemProvider : ISystemProvider
@@ -40,5 +41,8 @@ namespace EdgeDB.Abstractions
 
         public bool IsRooted(string path)
             => Path.IsPathRooted(path);
+
+        public string? GetEnvVariable(string name)
+            => Environment.GetEnvironmentVariable(name);
     }
 }

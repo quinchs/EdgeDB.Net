@@ -52,7 +52,10 @@ namespace EdgeDB.Tests.Unit.Projects
 
         private void TestProjectHashing(OSPlatform platform, string homeDir, string projectDir, string? xdgconf, string expectedResult)
         {
-            var mockSystem = new MockSystemProvider(platform, homeDir, projectDir, xdgconf ?? "/", expectedResult);
+            var mockSystem = new MockSystemProvider(platform, homeDir, new Dictionary<string, string>()
+            {
+                { "XDG_CONFIG_HOME", xdgconf! }
+            },  projectDir, xdgconf ?? "/", expectedResult);
 
             if (xdgconf is not null)
                 Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", xdgconf);
@@ -72,11 +75,13 @@ namespace EdgeDB.Tests.Unit.Projects
             private readonly string[] _dirs;
             private readonly string _home;
             private readonly OSPlatform _platform;
+            private readonly Dictionary<string, string> _env;
 
-            public MockSystemProvider(OSPlatform platform, string home, params string[] dirs)
+            public MockSystemProvider(OSPlatform platform, string home, Dictionary<string, string> env, params string[] dirs)
             {
                 _dirs = dirs;
                 _home = home;
+                _env = env;
                 _platform = platform;
             }
 
@@ -96,6 +101,11 @@ namespace EdgeDB.Tests.Unit.Projects
                 => IsOSPlatform(OSPlatform.Windows)
                     ? Path.IsPathRooted(path)
                     : path.StartsWith("/");
+
+            public string? GetEnvVariable(string name)
+                => _env.TryGetValue(name, out var val)
+                    ? val
+                    : null;
         }
     }
 }

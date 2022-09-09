@@ -19,7 +19,7 @@ namespace EdgeDB.Utils
                 return platform.CombinePaths(platform.GetHomeDir(), "Library", "Application Support", "edgedb");
             else
             {
-                var xdgConfigDir = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+                var xdgConfigDir = platform.GetEnvVariable("XDG_CONFIG_HOME");
 
                 if (xdgConfigDir is null || !platform.IsRooted(xdgConfigDir))
                     xdgConfigDir = platform.CombinePaths(platform.GetHomeDir(), ".config");
