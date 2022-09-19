@@ -1,7 +1,6 @@
-﻿using EdgeDB.Binary;
+using EdgeDB.Binary;
 using EdgeDB.Binary.Packets;
-using EdgeDB.Codecs;
-using EdgeDB.Models;
+using EdgeDB.Binary.Codecs;
 using EdgeDB.Utils;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,7 +18,7 @@ namespace EdgeDB
     /// <summary>
     ///     Represents an abstract binary client.
     /// </summary>
-    public abstract class EdgeDBBinaryClient : BaseEdgeDBClient, ITransactibleClient
+    internal abstract class EdgeDBBinaryClient : BaseEdgeDBClient, ITransactibleClient
     {
         /// <summary>
         ///     The major version of the protocol that this client supports.
@@ -120,9 +119,10 @@ namespace EdgeDB
         /// </summary>
         /// <param name="connection">The connection details used to connect to the database.</param>
         /// <param name="config">The configuration for this client.</param>
+        /// <param name="clientPoolHolder">The client pool holder for this client.</param>
         /// <param name="clientId">The optional client id of this client. This is used for logging and client pooling.</param>
-        public EdgeDBBinaryClient(EdgeDBConnection connection, EdgeDBConfig config, ulong? clientId = null)
-            : base(clientId ?? 0)
+        public EdgeDBBinaryClient(EdgeDBConnection connection, EdgeDBConfig config, IDisposable clientPoolHolder, ulong? clientId = null)
+            : base(clientId ?? 0, clientPoolHolder)
         {
             Logger = config.Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
             Connection = connection;
@@ -145,11 +145,11 @@ namespace EdgeDB
         internal readonly struct RawExecuteResult
         {
             public readonly ICodec Deserializer;
-            public readonly List<Data> Data;
+            public readonly Data[] Data;
 
             public RawExecuteResult(ICodec codec, List<Data> data)
             {
-                Data = data;
+                Data = data.ToArray();
                 Deserializer = codec;
             }
         }
@@ -158,7 +158,7 @@ namespace EdgeDB
         /// <exception cref="EdgeDBErrorException">The client received an <see cref="ErrorResponse"/>.</exception>
         /// <exception cref="UnexpectedMessageException">The client received an unexpected message.</exception>
         /// <exception cref="MissingCodecException">A codec could not be found for the given input arguments or the result.</exception>
-        internal async Task<RawExecuteResult> ExecuteInternalAsync(string query, IDictionary<string, object?>? args = null, Cardinality? cardinality = null,
+        internal async Task<RawExecuteResult> ExecuteInternalAsync<TResult>(string query, IDictionary<string, object?>? args = null, Cardinality? cardinality = null,
             Capabilities? capabilities = Capabilities.Modifications, IOFormat format = IOFormat.Binary, bool isRetry = false, 
             CancellationToken token = default)
         {
@@ -183,14 +183,11 @@ namespace EdgeDB
                 var cacheKey = CodecBuilder.GetCacheHashKey(query, cardinality ?? Cardinality.Many, format);
 
                 var serializedState = Session.Serialize();
-
-                List<IReceiveable?> p = new();
-
+                
                 if (!CodecBuilder.TryGetCodecs(cacheKey, out var inCodecInfo, out var outCodecInfo))
                 {
                     bool parseHandlerPredicate(IReceiveable? packet)
                     {
-                        p.Add(packet);
                         switch (packet)
                         {
                             case ErrorResponse err when err.ErrorCode is not ServerErrorCodes.StateMismatchError:
@@ -302,14 +299,14 @@ namespace EdgeDB
                 _semaphore.Release();
                 released = true;
 
-                return await ExecuteInternalAsync(query, args, cardinality, capabilities, format, true, token).ConfigureAwait(false);
+                return await ExecuteInternalAsync<TResult>(query, args, cardinality, capabilities, format, true, token).ConfigureAwait(false);
             }
             catch (EdgeDBException x) when (x.ShouldRetry && !isRetry)
             {
                 _semaphore.Release();
                 released = true;
 
-                return await ExecuteInternalAsync(query, args, cardinality, capabilities, format, true, token).ConfigureAwait(false);
+                return await ExecuteInternalAsync<TResult>(query, args, cardinality, capabilities, format, true, token).ConfigureAwait(false);
             }
             catch (Exception x)
             {
@@ -337,7 +334,7 @@ namespace EdgeDB
         /// <exception cref="MissingCodecException">A codec could not be found for the given input arguments or the result.</exception>
         public override async Task ExecuteAsync(string query, IDictionary<string, object?>? args = null,
             Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
-            => await ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, token: token).ConfigureAwait(false);
+            => await ExecuteInternalAsync<object>(query, args, Cardinality.Many, capabilities, token: token).ConfigureAwait(false);
 
         /// <inheritdoc/>
         /// <exception cref="EdgeDBException">A general error occored.</exception>
@@ -350,16 +347,16 @@ namespace EdgeDB
             Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
             where TResult : default
         {
-            var result = await ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, token: token);
+            var result = await ExecuteInternalAsync<TResult>(query, args, Cardinality.Many, capabilities, token: token);
 
             List<TResult?> returnResults = new();
 
-            foreach (var item in result.Data)
+            for(int i = 0; i != result.Data.Length; i++)
             {
-                var obj = ObjectBuilder.BuildResult<TResult>(result.Deserializer.Deserialize(item.PayloadBuffer));
+                var obj = ObjectBuilder.BuildResult<TResult>(result.Deserializer, ref result.Data[i]);
                 returnResults.Add(obj);
             }
-
+            
             return returnResults.ToImmutableArray();
         }
 
@@ -375,16 +372,16 @@ namespace EdgeDB
             Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
             where TResult : default
         {
-            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, capabilities, token: token);
+            var result = await ExecuteInternalAsync<TResult>(query, args, Cardinality.AtMostOne, capabilities, token: token);
 
-            if (result.Data.Count > 1)
+            if (result.Data.Length > 1)
                 throw new ResultCardinalityMismatchException(Cardinality.AtMostOne, Cardinality.Many);
 
             var queryResult = result.Data.FirstOrDefault();
 
             return queryResult.PayloadBuffer is null
                 ? default
-                : ObjectBuilder.BuildResult<TResult>(result.Deserializer.Deserialize(queryResult.PayloadBuffer));
+                : ObjectBuilder.BuildResult<TResult>(result.Deserializer, ref result.Data[0]);
         }
 
         /// <inheritdoc/>
@@ -399,16 +396,16 @@ namespace EdgeDB
         public override async Task<TResult> QueryRequiredSingleAsync<TResult>(string query, IDictionary<string, object?>? args = null,
             Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
         {
-            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, capabilities, token: token);
+            var result = await ExecuteInternalAsync<TResult>(query, args, Cardinality.AtMostOne, capabilities, token: token);
 
-            if (result.Data.Count is > 1 or 0)
-                throw new ResultCardinalityMismatchException(Cardinality.One, result.Data.Count > 1 ? Cardinality.Many : Cardinality.AtMostOne);
+            if (result.Data.Length is > 1 or 0)
+                throw new ResultCardinalityMismatchException(Cardinality.One, result.Data.Length > 1 ? Cardinality.Many : Cardinality.AtMostOne);
 
             var queryResult = result.Data.FirstOrDefault();
-
+            
             return queryResult.PayloadBuffer is null
                 ? throw new MissingRequiredException()
-                : ObjectBuilder.BuildResult<TResult>(result.Deserializer.Deserialize(queryResult.PayloadBuffer))!;
+                : ObjectBuilder.BuildResult<TResult>(result.Deserializer, ref result.Data[0])!;
         }
 
         /// <inheritdoc/>
@@ -419,9 +416,9 @@ namespace EdgeDB
         /// <exception cref="MissingCodecException">A codec could not be found for the given input arguments or the result.</exception>
         public override async Task<DataTypes.Json> QueryJsonAsync(string query, IDictionary<string, object?>? args = null, Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
         {
-            var result = await ExecuteInternalAsync(query, args, Cardinality.Many, capabilities, IOFormat.Json, token: token);
+            var result = await ExecuteInternalAsync<object>(query, args, Cardinality.Many, capabilities, IOFormat.Json, token: token);
             
-            return result.Data.Count == 1
+            return result.Data.Length == 1
                 ? (string)result.Deserializer.Deserialize(result.Data[0].PayloadBuffer)!
                 : "[]";
         }
@@ -433,7 +430,7 @@ namespace EdgeDB
         /// <exception cref="MissingCodecException">A codec could not be found for the given input arguments or the result.</exception>
         public override async Task<IReadOnlyCollection<DataTypes.Json>> QueryJsonElementsAsync(string query, IDictionary<string, object?>? args = null, Capabilities? capabilities = Capabilities.Modifications, CancellationToken token = default)
         {
-            var result = await ExecuteInternalAsync(query, args, Cardinality.AtMostOne, capabilities, IOFormat.Json, token: token);
+            var result = await ExecuteInternalAsync<object>(query, args, Cardinality.AtMostOne, capabilities, IOFormat.Json, token: token);
 
             return result.Data.Any()
                 ? result.Data.Select(x => new DataTypes.Json((string?)result.Deserializer.Deserialize(x.PayloadBuffer))).ToImmutableArray()
@@ -538,7 +535,7 @@ namespace EdgeDB
                     throw new UnexpectedMessageException(ServerMessageType.Authentication, initialResult.Type);
 
                 // check the continue
-                var (FinalMessage, ExpectedSig) = scram.BuildFinalMessage(intiailStatus, Connection.Password!);
+                var (FinalMessage, ExpectedSig) = scram.BuildFinalMessage(in intiailStatus, Connection.Password!);
 
                 var finalResult = await Duplexer.DuplexAsync(x => x.Type == ServerMessageType.Authentication, packets: FinalMessage).ConfigureAwait(false);
 
@@ -622,7 +619,7 @@ namespace EdgeDB
                         var descriptorId = reader.ReadGuid();
                         reader.ReadBytes(length, out var typeDesc);
 
-                        ICodec? codec = CodecBuilder.GetCodec(descriptorId);
+                        var codec = CodecBuilder.GetCodec(descriptorId);
 
                         if (codec is null)
                         {
@@ -634,7 +631,7 @@ namespace EdgeDB
                         }
 
                         // disard length
-                        reader.ReadUInt32();
+                        reader.Skip(4);
 
                         var obj = codec.Deserialize(ref reader)!;
 
@@ -664,7 +661,7 @@ namespace EdgeDB
         /// <inheritdoc/>
         public override async ValueTask ConnectAsync(CancellationToken token = default)
         {
-            await _connectSemaphone.WaitAsync();
+            await _connectSemaphone.WaitAsync(token);
 
             try
             {
@@ -862,16 +859,16 @@ namespace EdgeDB
 
             var deferMode = $"{(!deferrable ? "not " : "")}deferrable";
 
-            await ExecuteInternalAsync($"start transaction isolation {isolationMode}, {readMode}, {deferMode}", capabilities: Capabilities.Transaction, token: token).ConfigureAwait(false);
+            await ExecuteInternalAsync<object>($"start transaction isolation {isolationMode}, {readMode}, {deferMode}", capabilities: Capabilities.Transaction, token: token).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
         async Task ITransactibleClient.CommitAsync(CancellationToken token)
-            => await ExecuteInternalAsync($"commit", capabilities: Capabilities.Transaction, token: token).ConfigureAwait(false);
+            => await ExecuteInternalAsync<object>($"commit", capabilities: Capabilities.Transaction, token: token).ConfigureAwait(false);
 
         /// <inheritdoc/>
         async Task ITransactibleClient.RollbackAsync(CancellationToken token)
-            => await ExecuteInternalAsync($"rollback", capabilities: Capabilities.Transaction, token: token).ConfigureAwait(false);
+            => await ExecuteInternalAsync<object>($"rollback", capabilities: Capabilities.Transaction, token: token).ConfigureAwait(false);
 
         /// <inheritdoc/>
         TransactionState ITransactibleClient.TransactionState => TransactionState;

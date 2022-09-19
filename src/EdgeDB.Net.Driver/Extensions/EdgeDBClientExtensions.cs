@@ -1,7 +1,7 @@
-﻿using EdgeDB.Binary;
+using EdgeDB.Binary;
 using EdgeDB.Binary.Packets;
 using EdgeDB.Dumps;
-using EdgeDB.Models;
+using System.Runtime.InteropServices;
 
 namespace EdgeDB
 {
@@ -112,13 +112,14 @@ namespace EdgeDB
         /// <summary>
         ///     Dumps the current database to a stream.
         /// </summary>
-        /// <param name="client">The TCP client to preform the transaction with.</param>
+        /// <param name="pool">The client to preform the dump with.</param>
         /// <param name="token">A token to cancel the operation with.</param>
         /// <returns>A stream containing the entire dumped database.</returns>
         /// <exception cref="EdgeDBErrorException">The server sent an error message during the dumping process.</exception>
         /// <exception cref="EdgeDBException">The server sent a mismatched packet.</exception>
-        public static async Task<Stream?> DumpDatabaseAsync(this EdgeDBBinaryClient client, CancellationToken token = default)
+        public static async Task<Stream?> DumpDatabaseAsync(this EdgeDBClient pool, CancellationToken token = default)
         {
+            await using var client = await pool.GetOrCreateClientAsync<EdgeDBBinaryClient>(token).ConfigureAwait(false);
             using var cmdLock = await client.AquireCommandLockAsync(token).ConfigureAwait(false);
 
             try
@@ -127,7 +128,8 @@ namespace EdgeDB
                 token.Register(() => tcs.SetCanceled(token));
 
                 var stream = new MemoryStream();
-                var writer = new DumpWriter(stream);
+                List<DumpBlock> blocks = new();
+
 
                 var handler = (IReceiveable msg) =>
                 {
@@ -138,7 +140,7 @@ namespace EdgeDB
                             break;
                         case DumpBlock block:
                             {
-                                writer.WriteDumpBlock(block);
+                                blocks.Add(block);
                             }
                             break;
                         case ErrorResponse error:
@@ -166,9 +168,9 @@ namespace EdgeDB
                     throw new UnexpectedMessageException(ServerMessageType.DumpHeader, dump.Type);
                 }
 
-                writer.WriteDumpHeader(dumpHeader);
-
                 await tcs.Task.ConfigureAwait(false);
+
+                WriteDumpDataToStream(stream, ref dumpHeader, blocks);
 
                 client.Duplexer.OnMessage -= handler;
 
@@ -181,10 +183,19 @@ namespace EdgeDB
             }
         }
 
+        private static void WriteDumpDataToStream(Stream stream, ref DumpHeader header, List<DumpBlock> blocks)
+        {
+            var writer = new DumpWriter();
+            writer.WriteDumpHeader(header);
+            writer.WriteDumpBlocks(blocks);
+
+            stream.Write(writer.Data.Span);
+        }
+
         /// <summary>
         ///     Restores the database based on a database dump stream.
         /// </summary>
-        /// <param name="client">The TCP client to preform the transaction with.</param>
+        /// <param name="pool">The TCP client to preform the restore with.</param>
         /// <param name="stream">The stream containing the database dump.</param>
         /// <param name="token">A token to cancel the operation with.</param>
         /// <returns>The command complete packet received after restoring the database.</returns>
@@ -193,8 +204,9 @@ namespace EdgeDB
         ///     due to the database not being empty.
         /// </exception>
         /// <exception cref="EdgeDBErrorException">The server sent an error during the restore operation.</exception>
-        public static async Task<CommandComplete> RestoreDatabaseAsync(this EdgeDBBinaryClient client, Stream stream, CancellationToken token = default)
+        public static async Task<CommandComplete> RestoreDatabaseAsync(this EdgeDBClient pool, Stream stream, CancellationToken token = default)
         {
+            await using var client = await pool.GetOrCreateClientAsync<EdgeDBBinaryClient>(token).ConfigureAwait(false);
             using var cmdLock = await client.AquireCommandLockAsync(token).ConfigureAwait(false);
 
             var reader = new DumpReader();

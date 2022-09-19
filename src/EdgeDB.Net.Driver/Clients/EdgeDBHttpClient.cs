@@ -1,5 +1,4 @@
-﻿using EdgeDB.DataTypes;
-using EdgeDB.Models;
+using EdgeDB.DataTypes;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -18,7 +17,7 @@ namespace EdgeDB
     /// <summary>
     ///     Represents the returned data from a http-based query.
     /// </summary>
-    public class HttpQueryResult : IExecuteResult
+    internal sealed class HttpQueryResult : IExecuteResult
     {
         /// <summary>
         ///     Gets or sets the data returned from the query.
@@ -78,7 +77,7 @@ namespace EdgeDB
     /// <summary>
     ///     Represents a client that can preform queries over HTTP.
     /// </summary>
-    public sealed class EdgeDBHttpClient : BaseEdgeDBClient
+    internal sealed class EdgeDBHttpClient : BaseEdgeDBClient
     {
         /// <summary>
         ///     Fired when a query is executed.
@@ -119,9 +118,10 @@ namespace EdgeDB
         /// </summary>
         /// <param name="connection">The connection details used to connect to the database.</param>
         /// <param name="config">The configuration for this client.</param>
+        /// <param name="poolHolder">The client pool holder for this client.</param>
         /// <param name="clientId">The optional client id of this client. This is used for logging and client pooling.</param>
-        public EdgeDBHttpClient(EdgeDBConnection connection, EdgeDBConfig config, ulong clientId)
-            : base(clientId)
+        public EdgeDBHttpClient(EdgeDBConnection connection, EdgeDBConfig config, IDisposable poolHolder, ulong clientId)
+            : base(clientId, poolHolder)
         {
             _logger = config.Logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
             _connection = connection;
