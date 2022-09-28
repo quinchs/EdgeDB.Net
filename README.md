@@ -12,34 +12,8 @@
   </a>
 </p>
 
+<h1 align="center">THIS REPOSITORY HAS BEEN MOVED</h1>
 
-EdgeDB.Net is a community maintained .NET driver for the [EdgeDB](https://edgedb.com) database.
-
-## Installation
-
-EdgeDB DotNet is distributed through the NuGet package manager; the most recommended way to install 
-it is to use the dotnet command line tool or NuGet package manager in Visual Studio.
-
-```bash
-$ dotnet add package EdgeDB.Net.Driver
-```
-
-## Examples
-You can view our curated examples [here](https://github.com/quinchs/EdgeDB.Net/tree/dev/examples/EdgeDB.Examples.ExampleApp/Examples). We also have a demo asp.net project you can view [here](https://github.com/quinchs/EdgeDB.Net/tree/dev/examples/EdgeDB.Examples.ExampleTODOApi). You're more than welcome to contribute to the examples!
-
-## Compiling
-If you want to build the EdgeDB.Net project from source, you will need the [.NET 6 SDK](https://dotnet.microsoft.com/en-us/download).
-  
-Once you have the SDK installed you can run the dotnet build command in the root directory of the project:
-
-```bash
-$ dotnet build
-```
-
-## Testing
-
-You can run the test suite by using the dotnet test command like so:
-
-```bash
-$ dotnet test
-```
+<p align="center">
+You may now find the EdgeDB.Net repository at <a href="https://github.com/edgedb/edgedb-net">edgedb/edgedb-net</a>. Thanks to all who've contributed and used this project!
+</p>
